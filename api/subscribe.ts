@@ -133,12 +133,15 @@ export default async function handler(request: Request) {
         .select('id')
         .single();
 
-      if (error) {
+      if (error || !newUser) {
         console.error('Error creating user:', error);
         return new Response(
           JSON.stringify({ 
             error: 'Failed to create subscription',
-            details: error.message
+            details: error?.message || error?.code || 'No user returned from database',
+            code: error?.code,
+            hint: error?.hint,
+            full: error ? JSON.stringify(error) : 'error was null but no user returned'
           }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
@@ -204,11 +207,13 @@ export default async function handler(request: Request) {
 
   } catch (error) {
     console.error('Subscribe error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: errorMessage
+        details: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        full: JSON.stringify(error, Object.getOwnPropertyNames(error || {}))
       }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
