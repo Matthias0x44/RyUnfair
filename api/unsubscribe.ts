@@ -4,15 +4,20 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function hashForGdpr(input: string): string {
-  return crypto.createHash('sha256').update(input).digest('hex');
+// Hash function for GDPR compliance (don't store raw IPs)
+// Uses Web Crypto API for Edge Runtime compatibility
+async function hashForGdpr(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export const config = {
@@ -66,8 +71,8 @@ export default async function handler(request: Request) {
   await supabase.from('gdpr_audit_log').insert({
     action: 'consent_withdrawn',
     user_id: user.id,
-    user_email_hash: hashForGdpr(email.toLowerCase()),
-    ip_hash: hashForGdpr(ip),
+    user_email_hash: await hashForGdpr(email.toLowerCase()),
+    ip_hash: await hashForGdpr(ip),
     details: { 
       timestamp: new Date().toISOString(),
       method: 'unsubscribe_link',

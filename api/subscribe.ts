@@ -5,7 +5,6 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -13,8 +12,13 @@ const supabase = createClient(
 );
 
 // Hash function for GDPR compliance (don't store raw IPs)
-function hashForGdpr(input: string): string {
-  return crypto.createHash('sha256').update(input).digest('hex');
+// Uses Web Crypto API for Edge Runtime compatibility
+async function hashForGdpr(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export const config = {
@@ -62,7 +66,7 @@ export default async function handler(request: Request) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                request.headers.get('x-real-ip') || 
                'unknown';
-    const ipHash = hashForGdpr(ip);
+    const ipHash = await hashForGdpr(ip);
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -128,7 +132,7 @@ export default async function handler(request: Request) {
     await supabase.from('gdpr_audit_log').insert({
       action: 'consent_given',
       user_id: userId,
-      user_email_hash: hashForGdpr(email.toLowerCase()),
+      user_email_hash: await hashForGdpr(email.toLowerCase()),
       ip_hash: ipHash,
       details: {
         marketing_consent: marketingConsent || false,

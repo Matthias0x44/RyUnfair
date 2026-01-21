@@ -4,15 +4,20 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function hashForGdpr(input: string): string {
-  return crypto.createHash('sha256').update(input).digest('hex');
+// Hash function for GDPR compliance (don't store raw IPs)
+// Uses Web Crypto API for Edge Runtime compatibility
+async function hashForGdpr(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export const config = {
@@ -34,8 +39,8 @@ export default async function handler(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
              request.headers.get('x-real-ip') || 
              'unknown';
-  const ipHash = hashForGdpr(ip);
-  const userAgentHash = hashForGdpr(request.headers.get('user-agent') || 'unknown');
+  const ipHash = await hashForGdpr(ip);
+  const userAgentHash = await hashForGdpr(request.headers.get('user-agent') || 'unknown');
 
   // Find user
   const { data: user, error: userError } = await supabase
@@ -101,7 +106,7 @@ export default async function handler(request: Request) {
     await supabase.from('gdpr_audit_log').insert({
       action: 'data_exported',
       user_id: user.id,
-      user_email_hash: hashForGdpr(email.toLowerCase()),
+      user_email_hash: await hashForGdpr(email.toLowerCase()),
       ip_hash: ipHash,
       user_agent_hash: userAgentHash,
       details: { timestamp: new Date().toISOString() },
@@ -120,7 +125,7 @@ export default async function handler(request: Request) {
   // DELETE - Erase user data
   // =============================================
   if (request.method === 'DELETE') {
-    const emailHash = hashForGdpr(email.toLowerCase());
+    const emailHash = await hashForGdpr(email.toLowerCase());
 
     // Log deletion BEFORE deleting (for audit trail)
     await supabase.from('gdpr_audit_log').insert({
