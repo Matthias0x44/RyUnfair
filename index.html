@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RyUnfair - Track Your Ryanair Delay Compensation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  
+  <header class="header">
+    <div class="logo">
+      <span class="logo-ry">Ry</span><span class="logo-unfair">Unfair</span>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-section="tracker">Track Flight</button>
+      <button class="nav-btn" data-section="historic">Historic Flights</button>
+      <button class="nav-btn" data-section="guide">How to Claim</button>
+      <button class="nav-btn" data-section="cheatsheet">Cheat Sheet</button>
+      <button class="nav-btn" data-section="law">Know the Law</button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <!-- Flight Tracker Section -->
+    <section id="tracker" class="section active">
+      <div class="hero">
+        <h1>They delayed you.<br><span class="highlight">Make them pay.</span></h1>
+        <p class="subtitle">Track your Ryanair flight in real-time. Know exactly when you're owed compensation under EU261/UK261 law.</p>
+      </div>
+
+      <div class="tracker-grid">
+        <div class="input-card">
+          <h2>Enter Your Flight</h2>
+          <form id="flight-form" class="flight-form">
+            <div class="form-group">
+              <label for="flight-number">Flight Number</label>
+              <input type="text" id="flight-number" placeholder="e.g. FR1234" required>
+            </div>
+            <div class="form-group">
+              <label for="flight-date">Flight Date</label>
+              <input type="date" id="flight-date" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="departure">Departure Airport</label>
+                <input type="text" id="departure" placeholder="e.g. STN" required>
+              </div>
+              <div class="form-group">
+                <label for="arrival">Arrival Airport</label>
+                <input type="text" id="arrival" placeholder="e.g. DUB" required>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary">
+              <span class="btn-icon">✈</span>
+              Track This Flight
+            </button>
+          </form>
+
+          <div class="reminder-section">
+            <h3>Get Notified</h3>
+            <p>We'll email you the moment your delay qualifies for compensation.</p>
+            <div class="email-form">
+              <input type="email" id="reminder-email" placeholder="your@email.com">
+              <button type="button" id="set-reminder" class="btn-secondary">Set Reminder</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-card" id="flight-status">
+          <div class="status-placeholder">
+            <div class="plane-icon">✈</div>
+            <p>Enter your flight details to start tracking</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="live-tracker" id="live-tracker" style="display: none;">
+        <h2>Live Flight Status</h2>
+        <div class="tracker-display">
+          <div class="flight-visual">
+            <div class="route-line">
+              <div class="airport departure-marker">
+                <span class="airport-code" id="dep-code">---</span>
+                <span class="airport-time" id="dep-time">--:--</span>
+              </div>
+              <div class="plane-position" id="plane-marker">
+                <span class="plane-emoji">✈</span>
+              </div>
+              <div class="airport arrival-marker">
+                <span class="airport-code" id="arr-code">---</span>
+                <span class="airport-time" id="arr-time">--:--</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="delay-meter">
+            <div class="meter-header">
+              <span>Current Delay</span>
+              <span class="delay-value" id="delay-value">0 min</span>
+            </div>
+            <div class="meter-bar">
+              <div class="meter-fill" id="delay-fill"></div>
+              <div class="meter-markers">
+                <span class="marker" style="left: 0%">0</span>
+                <span class="marker threshold" style="left: 50%">2h</span>
+                <span class="marker threshold highlight" style="left: 75%">3h</span>
+                <span class="marker" style="left: 100%">4h+</span>
+              </div>
+            </div>
+            <div class="compensation-status" id="compensation-status">
+              <span class="status-icon">⏳</span>
+              <span class="status-text">Monitoring delay...</span>
+            </div>
+          </div>
+
+          <div class="flight-details-grid">
+            <div class="detail-box">
+              <span class="detail-label">Scheduled Arrival</span>
+              <span class="detail-value" id="scheduled-arrival">--:--</span>
+            </div>
+            <div class="detail-box">
+              <span class="detail-label">Estimated Arrival</span>
+              <span class="detail-value" id="estimated-arrival">--:--</span>
+            </div>
+            <div class="detail-box">
+              <span class="detail-label">Doors Open (Est.)</span>
+              <span class="detail-value" id="doors-open">--:--</span>
+            </div>
+            <div class="detail-box highlight-box">
+              <span class="detail-label">Potential Compensation</span>
+              <span class="detail-value" id="potential-comp">€0</span>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn-action" id="add-calendar">
+              <span>📅</span> Add to Calendar
+            </button>
+            <button class="btn-action" id="save-flight">
+              <span>💾</span> Save to My Flights
+            </button>
+            <button class="btn-action" id="refresh-status">
+              <span>🔄</span> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Historic Flights Section -->
+    <section id="historic" class="section">
+      <h1>Check Historic Flights</h1>
+      <p class="section-intro">Look up past flights to see if you're owed compensation. You have up to <strong>6 years</strong> in the UK and <strong>3 years</strong> in most EU countries to claim!</p>
+      
+      <div class="historic-search">
+        <form id="historic-form" class="flight-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="hist-flight-number">Flight Number</label>
+              <input type="text" id="hist-flight-number" placeholder="e.g. FR1234">
+            </div>
+            <div class="form-group">
+              <label for="hist-date">Flight Date</label>
+              <input type="date" id="hist-date">
+            </div>
+            <div class="form-group">
+              <label for="hist-departure">From</label>
+              <input type="text" id="hist-departure" placeholder="e.g. STN">
+            </div>
+            <div class="form-group">
+              <label for="hist-arrival">To</label>
+              <input type="text" id="hist-arrival" placeholder="e.g. DUB">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">
+            <span class="btn-icon">🔍</span>
+            Search Historic Flight
+          </button>
+        </form>
+      </div>
+
+      <div class="saved-flights">
+        <h2>Your Saved Flights</h2>
+        <div id="saved-flights-list" class="flights-list">
+          <p class="empty-state">No saved flights yet. Track a flight and save it to see it here.</p>
+        </div>
+      </div>
+
+      <div id="historic-result" class="historic-result" style="display: none;"></div>
+    </section>
+
+    <!-- How to Claim Guide Section -->
+    <section id="guide" class="section">
+      <h1>How to Claim: Complete Guide</h1>
+      <p class="section-intro">A step-by-step walkthrough to get your compensation from Ryanair. Follow each step carefully.</p>
+
+      <div class="guide-timeline">
+        <div class="guide-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Gather Your Evidence</h3>
+            <p>Before you start, collect:</p>
+            <ul>
+              <li>✓ Booking confirmation email</li>
+              <li>✓ Boarding pass (screenshot if digital)</li>
+              <li>✓ Any communication from Ryanair about the delay</li>
+              <li>✓ Receipts for any expenses incurred</li>
+              <li>✓ Screenshot of actual arrival time (this app helps!)</li>
+            </ul>
+            <div class="step-tip">
+              <strong>Pro Tip:</strong> The delay is measured from when the aircraft doors open at your destination, NOT when the plane lands.
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Go to Ryanair's Claim Portal</h3>
+            <p>Navigate to their official compensation form:</p>
+            <a href="https://www.ryanair.com/gb/en/useful-info/help-centre/eu-261-702-compensation" target="_blank" class="external-link">
+              Ryanair EU261 Claim Form →
+            </a>
+            <div class="step-warning">
+              <strong>Warning:</strong> Ryanair may try to redirect you or offer vouchers. Always insist on cash compensation - it's your legal right!
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Fill Out the Form Completely</h3>
+            <p>You'll need to provide:</p>
+            <ul>
+              <li>• Your booking reference number</li>
+              <li>• Flight details (number, date, route)</li>
+              <li>• Personal details of all passengers claiming</li>
+              <li>• Bank details for payment</li>
+            </ul>
+            <div class="step-tip">
+              <strong>Important:</strong> Each passenger on the booking can claim individually - don't forget family members!
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Submit and Document Everything</h3>
+            <p>After submitting:</p>
+            <ul>
+              <li>✓ Screenshot the confirmation page</li>
+              <li>✓ Save any reference number given</li>
+              <li>✓ Note the date and time of submission</li>
+              <li>✓ Keep copies of all emails</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <h3>Wait and Follow Up</h3>
+            <p>Ryanair should respond within 28 days. If they don't:</p>
+            <ul>
+              <li>• Send a follow-up email referencing your claim</li>
+              <li>• Wait another 14 days</li>
+              <li>• If still no response, escalate (see Step 6)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-number">6</div>
+          <div class="step-content">
+            <h3>Escalate if Rejected or Ignored</h3>
+            <p>If Ryanair refuses or doesn't respond, you have options:</p>
+            <div class="escalation-options">
+              <div class="escalation-card">
+                <h4>🇬🇧 UK Flights</h4>
+                <p>Use the <a href="https://www.caa.co.uk/passengers/resolving-travel-problems/" target="_blank">CAA (Civil Aviation Authority)</a> complaint service. It's free and they have enforcement powers.</p>
+              </div>
+              <div class="escalation-card">
+                <h4>🇪🇺 EU Flights</h4>
+                <p>Contact the National Enforcement Body in the country of departure. For Ireland: <a href="https://www.aviationreg.ie/" target="_blank">Aviation Regulator</a></p>
+              </div>
+              <div class="escalation-card">
+                <h4>💰 Small Claims Court</h4>
+                <p>As a last resort, file in small claims court. In UK, use Money Claims Online - fee is around £35-£60 and Ryanair almost always settles before court.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step final-step">
+          <div class="step-number">7</div>
+          <div class="step-content">
+            <h3>Get Paid!</h3>
+            <p>Once approved, payment typically arrives within 7-14 days via bank transfer.</p>
+            <div class="compensation-summary">
+              <h4>Compensation Amounts (EU261/UK261):</h4>
+              <table class="comp-table">
+                <tr>
+                  <th>Distance</th>
+                  <th>Delay Required</th>
+                  <th>Compensation</th>
+                </tr>
+                <tr>
+                  <td>Under 1,500km</td>
+                  <td>3+ hours</td>
+                  <td>€250 / £220</td>
+                </tr>
+                <tr>
+                  <td>1,500-3,500km</td>
+                  <td>3+ hours</td>
+                  <td>€400 / £350</td>
+                </tr>
+                <tr>
+                  <td>Over 3,500km</td>
+                  <td>3+ hours</td>
+                  <td>€600 / £520</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cheat Sheet Section -->
+    <section id="cheatsheet" class="section">
+      <h1>Ryanair Claim Cheat Sheet</h1>
+      <p class="section-intro">Inside knowledge on navigating Ryanair's compensation system. They make it hard on purpose - here's how to fight back.</p>
+
+      <div class="cheatsheet-grid">
+        <div class="cheat-card warning-card">
+          <h3>⚠️ Common Rejection Tactics</h3>
+          <ul>
+            <li><strong>"Extraordinary circumstances"</strong> - They claim this for everything. Weather at departure IS often valid, but technical faults, staff shortages, and "operational issues" are NOT.</li>
+            <li><strong>"The delay was only X minutes"</strong> - They measure from touchdown, but legally it's from doors opening. Add 10-15 minutes to their figure.</li>
+            <li><strong>"You missed the deadline"</strong> - UK limit is 6 YEARS, not the 28 days they sometimes claim.</li>
+            <li><strong>Voucher offers</strong> - Never accept vouchers. You're entitled to cash. Period.</li>
+          </ul>
+        </div>
+
+        <div class="cheat-card success-card">
+          <h3>✅ Magic Words That Work</h3>
+          <ul>
+            <li>"I am claiming under EC Regulation 261/2004" (EU) or "UK261" (UK flights post-Brexit)</li>
+            <li>"Please provide written reasons for rejection citing the specific extraordinary circumstance"</li>
+            <li>"I will escalate to [CAA/NEB] and pursue via small claims if not resolved within 14 days"</li>
+            <li>"Please confirm receipt of this claim in writing"</li>
+          </ul>
+        </div>
+
+        <div class="cheat-card info-card">
+          <h3>📋 What Counts as "Extraordinary Circumstances"</h3>
+          <div class="two-column">
+            <div class="valid">
+              <h4>✓ Valid (You can't claim)</h4>
+              <ul>
+                <li>Severe weather at departure/arrival</li>
+                <li>Air traffic control strikes</li>
+                <li>Security threats</li>
+                <li>Political instability</li>
+                <li>Hidden manufacturing defects</li>
+              </ul>
+            </div>
+            <div class="invalid">
+              <h4>✗ NOT Valid (You CAN claim)</h4>
+              <ul>
+                <li>Technical/mechanical faults</li>
+                <li>Crew shortages</li>
+                <li>"Operational reasons"</li>
+                <li>Knock-on delays from earlier flights</li>
+                <li>Bird strikes (contested)</li>
+                <li>Baggage loading issues</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="cheat-card hack-card">
+          <h3>🔧 System Workarounds</h3>
+          <ul>
+            <li><strong>Form crashes/errors:</strong> Try incognito mode, different browser, or mobile app. Screenshot errors as evidence of obstruction.</li>
+            <li><strong>Can't find booking:</strong> Use the booking reference from your confirmation email, not the app. Check spam for original booking.</li>
+            <li><strong>"Session expired" loops:</strong> Clear all Ryanair cookies, restart browser, use the direct link: ryanair.com/eu261</li>
+            <li><strong>Email bouncing:</strong> Use their official addresses: customerqueries@ryanair.com and legalservices@ryanair.com</li>
+            <li><strong>No response after 28 days:</strong> Send a "Letter Before Action" via email. Template below.</li>
+          </ul>
+        </div>
+
+        <div class="cheat-card template-card">
+          <h3>📝 Letter Before Action Template</h3>
+          <div class="template-box">
+            <p><em>Subject: Letter Before Action - EU261 Claim [Your Reference]</em></p>
+            <p>Dear Ryanair Customer Services,</p>
+            <p>I submitted a compensation claim under EC Regulation 261/2004 on [DATE] regarding flight [FLIGHT NUMBER] on [FLIGHT DATE]. My claim reference is [REFERENCE].</p>
+            <p>I have not received a substantive response within the required timeframe. I am therefore writing to inform you that if I do not receive payment of €[AMOUNT] or a valid legal reason for rejection within 14 days, I will:</p>
+            <p>1. File a complaint with the [Civil Aviation Authority / relevant NEB]<br>
+            2. Issue proceedings in the Small Claims Court without further notice</p>
+            <p>Please treat this as a formal Letter Before Action under the Pre-Action Protocol.</p>
+            <p>Yours faithfully,<br>[Your Name]<br>[Your Address]<br>[Your Email]</p>
+          </div>
+          <button class="btn-copy" id="copy-template">📋 Copy Template</button>
+        </div>
+
+        <div class="cheat-card timing-card">
+          <h3>⏰ Critical Timing</h3>
+          <ul>
+            <li><strong>Claim deadline:</strong> 6 years (UK), 2-3 years (most EU countries)</li>
+            <li><strong>Ryanair should respond:</strong> 28 days (but often don't)</li>
+            <li><strong>Before escalating:</strong> Give them 14 more days after Letter Before Action</li>
+            <li><strong>CAA decision:</strong> Usually 2-3 months</li>
+            <li><strong>Small claims:</strong> 6-12 weeks, but they usually settle first</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Know the Law Section -->
+    <section id="law" class="section">
+      <h1>Know Your Rights</h1>
+      <p class="section-intro">Understanding EU Regulation 261/2004 and UK261 - the laws that entitle you to compensation.</p>
+
+      <div class="law-content">
+        <div class="law-card main-law">
+          <h2>EC Regulation 261/2004 (EU261)</h2>
+          <p>This EU regulation establishes common rules on compensation and assistance to passengers in the event of:</p>
+          <ul>
+            <li>Denied boarding (overbooking)</li>
+            <li>Flight cancellations</li>
+            <li>Long delays (3+ hours on arrival)</li>
+          </ul>
+          <p class="law-note">The UK retained this as "UK261" after Brexit, with identical provisions for UK departures and UK airline arrivals.</p>
+        </div>
+
+        <div class="law-grid">
+          <div class="law-card">
+            <h3>When Does It Apply?</h3>
+            <ul>
+              <li>✈️ Flights departing from ANY EU/UK airport (any airline)</li>
+              <li>✈️ Flights arriving in EU/UK on EU/UK-based airline</li>
+              <li>✈️ Does NOT apply to flights from outside EU/UK on non-EU/UK airlines</li>
+            </ul>
+          </div>
+
+          <div class="law-card">
+            <h3>The 3-Hour Rule</h3>
+            <p>You're entitled to compensation if you arrive at your final destination <strong>3 or more hours late</strong>.</p>
+            <p class="important">"Arrival" means when at least one aircraft door opens AND passengers can disembark - NOT when the plane lands!</p>
+          </div>
+
+          <div class="law-card">
+            <h3>Compensation Amounts</h3>
+            <table class="law-table">
+              <tr>
+                <td>&lt;1,500km</td>
+                <td><strong>€250</strong></td>
+              </tr>
+              <tr>
+                <td>1,500-3,500km</td>
+                <td><strong>€400</strong></td>
+              </tr>
+              <tr>
+                <td>&gt;3,500km (3-4hr delay)</td>
+                <td><strong>€300</strong></td>
+              </tr>
+              <tr>
+                <td>&gt;3,500km (4+hr delay)</td>
+                <td><strong>€600</strong></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="law-card">
+            <h3>Additional Rights During Delay</h3>
+            <p>If your flight is delayed over 2 hours, you're ALSO entitled to:</p>
+            <ul>
+              <li>🍔 Meals and refreshments</li>
+              <li>📞 2 free phone calls or emails</li>
+              <li>🏨 Hotel accommodation if overnight</li>
+              <li>🚗 Transport to/from hotel</li>
+            </ul>
+            <p class="law-note">Keep all receipts - you can claim these back too!</p>
+          </div>
+
+          <div class="law-card">
+            <h3>The "Extraordinary Circumstances" Exception</h3>
+            <p>Airlines don't have to pay if the delay was caused by circumstances beyond their control that couldn't be avoided. However...</p>
+            <p class="important">Courts have ruled VERY narrowly on this. Technical faults, staff issues, and "operational problems" do NOT count!</p>
+          </div>
+
+          <div class="law-card">
+            <h3>Time Limits to Claim</h3>
+            <table class="law-table">
+              <tr>
+                <td>🇬🇧 UK</td>
+                <td><strong>6 years</strong></td>
+              </tr>
+              <tr>
+                <td>🇮🇪 Ireland</td>
+                <td><strong>6 years</strong></td>
+              </tr>
+              <tr>
+                <td>🇩🇪 Germany</td>
+                <td><strong>3 years</strong></td>
+              </tr>
+              <tr>
+                <td>🇫🇷 France</td>
+                <td><strong>5 years</strong></td>
+              </tr>
+              <tr>
+                <td>🇪🇸 Spain</td>
+                <td><strong>5 years</strong></td>
+              </tr>
+              <tr>
+                <td>🇮🇹 Italy</td>
+                <td><strong>2 years</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="case-law">
+          <h2>Key Court Cases</h2>
+          <div class="case-grid">
+            <div class="case-card">
+              <h4>Sturgeon v Condor (2009)</h4>
+              <p>Established that delayed passengers have the same rights as cancelled passengers when delay is 3+ hours.</p>
+            </div>
+            <div class="case-card">
+              <h4>Wallentin-Hermann v Alitalia (2008)</h4>
+              <p>Technical problems are NOT extraordinary circumstances - airlines must maintain their aircraft.</p>
+            </div>
+            <div class="case-card">
+              <h4>Jet2 v Huzar (2014)</h4>
+              <p>UK ruling confirming technical faults don't exempt airlines from paying compensation.</p>
+            </div>
+            <div class="case-card">
+              <h4>Germanwings v Pešková (2019)</h4>
+              <p>Delays from previous flight disruptions don't count as extraordinary circumstances.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>RyUnfair is not affiliated with Ryanair. This tool helps passengers understand and exercise their legal rights under EU261/UK261.</p>
+    <p class="disclaimer">Flight data provided by OpenSky Network. Always verify delay times with official sources before claiming.</p>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+  <div id="modal" class="modal"></div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
+
