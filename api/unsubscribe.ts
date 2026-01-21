@@ -3,12 +3,19 @@
  * Unsubscribe user from emails (GDPR compliant)
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 // Hash function for GDPR compliance (don't store raw IPs)
 // Uses Web Crypto API for Edge Runtime compatibility
@@ -35,8 +42,10 @@ export default async function handler(request: Request) {
     });
   }
 
+  const db = getSupabase();
+
   // Find user
-  const { data: user } = await supabase
+  const { data: user } = await db
     .from('users')
     .select('id')
     .eq('email', email.toLowerCase())
@@ -51,7 +60,7 @@ export default async function handler(request: Request) {
   }
 
   // Withdraw consent
-  await supabase
+  await db
     .from('users')
     .update({
       consent_given: false,
@@ -60,7 +69,7 @@ export default async function handler(request: Request) {
     .eq('id', user.id);
 
   // Cancel pending notifications
-  await supabase
+  await db
     .from('notifications')
     .update({ status: 'cancelled' })
     .eq('user_id', user.id)
@@ -68,7 +77,7 @@ export default async function handler(request: Request) {
 
   // Log for GDPR audit
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-  await supabase.from('gdpr_audit_log').insert({
+  await db.from('gdpr_audit_log').insert({
     action: 'consent_withdrawn',
     user_id: user.id,
     user_email_hash: await hashForGdpr(email.toLowerCase()),

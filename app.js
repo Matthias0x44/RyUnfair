@@ -832,7 +832,7 @@ class UIController {
   generateCalendarFile(flight) {
     const event = {
       title: `Claim compensation for ${flight.flightNumber}`,
-      description: `Your flight ${flight.flightNumber} from ${flight.departure} to ${flight.arrival} was delayed ${Math.floor(flight.delayMinutes / 60)} hours. You may be entitled to ${flight.compensation.currency}${flight.compensation.amount} compensation under EU261/UK261.\\n\\nClaim at: https://www.ryanair.com/gb/en/useful-info/help-centre/eu-261-702-compensation`,
+      description: `Your flight ${flight.flightNumber} from ${flight.departure} to ${flight.arrival} was delayed ${Math.floor(flight.delayMinutes / 60)} hours. You may be entitled to ${flight.compensation.currency}${flight.compensation.amount} compensation under EU261/UK261.\\n\\nClaim at: https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261`,
       startDate: new Date(flight.date),
       endDate: new Date(flight.date)
     };
@@ -995,7 +995,7 @@ class UIController {
         ${compensation.eligible ? `
           <div class="claim-cta">
             <p>💰 You may be owed <strong>${compensation.currency}${compensation.amount}</strong> for this flight!</p>
-            <a href="https://www.ryanair.com/gb/en/useful-info/help-centre/eu-261-702-compensation" target="_blank" class="btn-primary">
+            <a href="https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261" target="_blank" class="btn-primary">
               Start Your Claim →
             </a>
           </div>

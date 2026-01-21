@@ -3,12 +3,19 @@
  * Verify user email address
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 export const config = {
   runtime: 'edge',
@@ -22,8 +29,10 @@ export default async function handler(request: Request) {
     return Response.redirect(`${url.origin}/?error=missing_token`);
   }
 
+  const db = getSupabase();
+
   // Find user with this verification token
-  const { data: user, error } = await supabase
+  const { data: user, error } = await db
     .from('users')
     .select('id, email, email_verified')
     .eq('verification_token', token)
@@ -39,7 +48,7 @@ export default async function handler(request: Request) {
   }
 
   // Mark as verified
-  await supabase
+  await db
     .from('users')
     .update({
       email_verified: true,
@@ -48,7 +57,7 @@ export default async function handler(request: Request) {
     .eq('id', user.id);
 
   // Log for GDPR audit
-  await supabase.from('gdpr_audit_log').insert({
+  await db.from('gdpr_audit_log').insert({
     action: 'email_verified',
     user_id: user.id,
     details: { timestamp: new Date().toISOString() },

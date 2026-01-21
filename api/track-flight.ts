@@ -3,12 +3,19 @@
  * Track a flight and store delay information
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 export const config = {
   runtime: 'edge',
@@ -58,10 +65,12 @@ export default async function handler(request: Request) {
       );
     }
 
+    const db = getSupabase();
+
     // Get user ID from email if needed
     let resolvedUserId = userId;
     if (!resolvedUserId && email) {
-      const { data: user } = await supabase
+      const { data: user } = await db
         .from('users')
         .select('id')
         .eq('email', email.toLowerCase())
@@ -78,7 +87,7 @@ export default async function handler(request: Request) {
     }
 
     // Upsert flight tracking data
-    const { data: flight, error } = await supabase
+    const { data: flight, error } = await db
       .from('tracked_flights')
       .upsert({
         user_id: resolvedUserId,
@@ -108,7 +117,7 @@ export default async function handler(request: Request) {
 
     // If flight is now completed and eligible, queue result notification
     if (status === 'completed' && compensation?.eligible) {
-      await supabase.from('notifications').insert({
+      await db.from('notifications').insert({
         user_id: resolvedUserId,
         flight_id: flight.id,
         type: 'flight_result',

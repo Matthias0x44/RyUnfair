@@ -4,12 +4,19 @@
  * GDPR compliant - requires explicit consent
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Service role for server-side operations
-);
+// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 // Hash function for GDPR compliance (don't store raw IPs)
 // Uses Web Crypto API for Edge Runtime compatibility
@@ -68,8 +75,10 @@ export default async function handler(request: Request) {
                'unknown';
     const ipHash = await hashForGdpr(ip);
 
+    const db = getSupabase();
+
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await db
       .from('users')
       .select('id, deleted_at')
       .eq('email', email.toLowerCase())
@@ -81,7 +90,7 @@ export default async function handler(request: Request) {
       // User exists, update consent
       userId = existingUser.id;
       
-      await supabase
+      await db
         .from('users')
         .update({
           consent_given: true,
@@ -95,7 +104,7 @@ export default async function handler(request: Request) {
       // Create new user
       const verificationToken = crypto.randomUUID();
       
-      const { data: newUser, error } = await supabase
+      const { data: newUser, error } = await db
         .from('users')
         .insert({
           email: email.toLowerCase(),
@@ -119,7 +128,7 @@ export default async function handler(request: Request) {
       userId = newUser.id;
 
       // Queue verification email
-      await supabase.from('notifications').insert({
+      await db.from('notifications').insert({
         user_id: userId,
         type: 'verification',
         subject: 'Verify your email for RyUnfair',
@@ -129,7 +138,7 @@ export default async function handler(request: Request) {
     }
 
     // Log consent for GDPR audit
-    await supabase.from('gdpr_audit_log').insert({
+    await db.from('gdpr_audit_log').insert({
       action: 'consent_given',
       user_id: userId,
       user_email_hash: await hashForGdpr(email.toLowerCase()),
@@ -142,7 +151,7 @@ export default async function handler(request: Request) {
 
     // If flight data provided, create tracking record
     if (flight && flight.flightNumber && flight.date) {
-      const { error: flightError } = await supabase
+      const { error: flightError } = await db
         .from('tracked_flights')
         .upsert({
           user_id: userId,

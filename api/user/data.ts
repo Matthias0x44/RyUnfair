@@ -3,12 +3,19 @@
  * DELETE /api/user/data - Delete all user data (GDPR Article 17 - Right to erasure)
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
 // Hash function for GDPR compliance (don't store raw IPs)
 // Uses Web Crypto API for Edge Runtime compatibility
@@ -42,8 +49,10 @@ export default async function handler(request: Request) {
   const ipHash = await hashForGdpr(ip);
   const userAgentHash = await hashForGdpr(request.headers.get('user-agent') || 'unknown');
 
+  const db = getSupabase();
+
   // Find user
-  const { data: user, error: userError } = await supabase
+  const { data: user, error: userError } = await db
     .from('users')
     .select('*')
     .eq('email', email.toLowerCase())
@@ -62,12 +71,12 @@ export default async function handler(request: Request) {
   // =============================================
   if (request.method === 'GET') {
     // Get all related data
-    const { data: flights } = await supabase
+    const { data: flights } = await db
       .from('tracked_flights')
       .select('*')
       .eq('user_id', user.id);
 
-    const { data: notifications } = await supabase
+    const { data: notifications } = await db
       .from('notifications')
       .select('type, subject, sent_at, status, created_at')
       .eq('user_id', user.id);
@@ -103,7 +112,7 @@ export default async function handler(request: Request) {
     };
 
     // Log the export for GDPR audit
-    await supabase.from('gdpr_audit_log').insert({
+    await db.from('gdpr_audit_log').insert({
       action: 'data_exported',
       user_id: user.id,
       user_email_hash: await hashForGdpr(email.toLowerCase()),
@@ -128,7 +137,7 @@ export default async function handler(request: Request) {
     const emailHash = await hashForGdpr(email.toLowerCase());
 
     // Log deletion BEFORE deleting (for audit trail)
-    await supabase.from('gdpr_audit_log').insert({
+    await db.from('gdpr_audit_log').insert({
       action: 'data_deleted',
       user_id: user.id,
       user_email_hash: emailHash,
@@ -141,7 +150,7 @@ export default async function handler(request: Request) {
     });
 
     // Soft delete the user (keeps audit trail, actual deletion after 30 days)
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await db
       .from('users')
       .update({ 
         deleted_at: new Date().toISOString(),
@@ -159,7 +168,7 @@ export default async function handler(request: Request) {
     }
 
     // Cancel any pending notifications
-    await supabase
+    await db
       .from('notifications')
       .update({ status: 'cancelled' })
       .eq('user_id', user.id)

@@ -9,15 +9,28 @@
  * - Email verification
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazily initialize clients (Edge Runtime requires runtime access to env vars)
+let supabase: SupabaseClient;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend;
+function getResend() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'RyUnfair <notifications@ryunfair.com>';
 const APP_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://ryunfair.com';
@@ -94,7 +107,7 @@ const templates = {
           </div>
 
           <div style="text-align: center; margin: 32px 0;">
-            <a href="https://www.ryanair.com/gb/en/useful-info/help-centre/eu-261-702-compensation" 
+            <a href="https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261" 
                style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block; font-size: 16px;">
               Claim Your ${data.compensation_currency}${data.compensation_amount} Now →
             </a>
@@ -217,8 +230,11 @@ export default async function handler(request: Request) {
   }
 
   try {
+    const db = getSupabase();
+    const emailClient = getResend();
+
     // Get pending notifications that are due
-    const { data: notifications, error } = await supabase
+    const { data: notifications, error } = await db
       .from('pending_notifications')
       .select('*')
       .limit(50); // Process in batches
@@ -250,7 +266,7 @@ export default async function handler(request: Request) {
           : templateFn;
 
         // Send via Resend
-        const { data: emailResult, error: emailError } = await resend.emails.send({
+        const { data: emailResult, error: emailError } = await emailClient.emails.send({
           from: FROM_EMAIL,
           to: notification.email,
           subject: emailContent.subject,
@@ -262,7 +278,7 @@ export default async function handler(request: Request) {
         }
 
         // Mark as sent
-        await supabase
+        await db
           .from('notifications')
           .update({
             status: 'sent',
@@ -276,7 +292,7 @@ export default async function handler(request: Request) {
         console.error(`Failed to send notification ${notification.id}:`, err);
         
         // Mark as failed
-        await supabase
+        await db
           .from('notifications')
           .update({ status: 'failed' })
           .eq('id', notification.id);
