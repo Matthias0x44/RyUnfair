@@ -1,106 +1,165 @@
 # RyUnfair ✈️💰
 
-**Track your Ryanair flight delays and claim the compensation you're legally entitled to under EU261/UK261 law.**
-
-> They delayed you. Make them pay.
+Track your Ryanair flight delays and claim the compensation you're legally entitled to under EU261/UK261 law.
 
 ## Features
 
-### 🛫 Real-Time Flight Tracking
-- Enter your flight number, date, and route
-- Track live flight status with simulated delay data
-- See estimated arrival and doors-open time (compensation is measured from when doors open, not landing!)
+- 🛫 **Real-time flight tracking** - Track delays as they happen
+- 💰 **Compensation calculator** - Know exactly how much you're owed (€250-€600)
+- 📧 **Email notifications** - Get notified when your delay qualifies
+- 📅 **Calendar export** - Add claim reminders to your calendar
+- 📚 **Claim guide** - Step-by-step instructions to get your money
+- 🎯 **Cheat sheet** - Insider tips for dealing with Ryanair's claim system
+- ⚖️ **Know the law** - Full EU261/UK261 explanation with key court cases
+- 🔒 **UK GDPR compliant** - Only collects email, full data export/delete
 
-### 💷 Automatic Compensation Calculator
-- Calculates your entitled compensation based on:
-  - Flight distance
-  - Delay duration (3+ hours required)
-  - UK vs EU regulations
-- Shows potential payout: €250-€600 / £220-£520
+## Quick Start
 
-### 📧 Email Reminders
-- Get notified when your delay qualifies for compensation
-- Never miss a claim deadline
+### Prerequisites
 
-### 📅 Calendar Export
-- Add claim reminders to your calendar (.ics download)
+- Node.js 18+
+- [Supabase](https://supabase.com) project
+- [Resend](https://resend.com) account for emails
+- [Vercel](https://vercel.com) account for deployment
 
-### 🔍 Historic Flight Lookup
-- Check past flights for compensation eligibility
-- You have **6 years** in the UK and **3 years** in most EU countries to claim!
+### 1. Clone & Install
 
-### 📋 Ryanair Claim Cheat Sheet
-- Common rejection tactics and how to counter them
-- "Magic words" that work in claims
-- What counts as "extraordinary circumstances"
-- System workarounds for their buggy claim portal
-- Letter Before Action template (copy-paste ready)
-
-### ⚖️ Know the Law
-- Full explanation of EU Regulation 261/2004 and UK261
-- Compensation amounts by distance
-- Time limits by country
-- Key court cases that support your claim
-
-## Getting Started
-
-1. **Open the app**: Simply open `index.html` in your browser, or run a local server:
-   ```bash
-   python3 -m http.server 8080
-   ```
-   Then visit `http://localhost:8080`
-
-2. **Enter your flight details**:
-   - Flight number (e.g., FR1234)
-   - Flight date
-   - Departure airport code (e.g., STN)
-   - Arrival airport code (e.g., DUB)
-
-3. **Track and monitor** your flight for delays
-
-4. **If delayed 3+ hours**: Follow the step-by-step guide to claim your compensation
-
-## Compensation Amounts
-
-| Distance | Delay Required | EU Amount | UK Amount |
-|----------|---------------|-----------|-----------|
-| Under 1,500km | 3+ hours | €250 | £220 |
-| 1,500-3,500km | 3+ hours | €400 | £350 |
-| Over 3,500km | 3+ hours | €600 | £520 |
-
-## Important Notes
-
-- **Delay is measured from doors opening**, not when the plane lands. Add 10-15 minutes to the airline's stated delay.
-- **Don't accept vouchers** - you're entitled to cash compensation
-- **"Extraordinary circumstances"** is often misused by airlines. Technical faults, crew shortages, and "operational reasons" do NOT qualify!
-
-## Tech Stack
-
-- Pure HTML5, CSS3, JavaScript (ES6+)
-- No frameworks or dependencies
-- OpenSky Network API integration (for real flights)
-- LocalStorage for saving flights and reminders
-- Responsive design
-
-## Files
-
-```
-RyUnfair/
-├── index.html      # Main HTML structure
-├── styles.css      # Styling (dark theme, responsive)
-├── app.js          # Core application logic
-└── README.md       # This file
+```bash
+git clone https://github.com/Matthias0x44/RyUnfair.git
+cd RyUnfair
+npm install
 ```
 
-## Disclaimer
+### 2. Set Up Supabase
 
-RyUnfair is not affiliated with Ryanair. This tool helps passengers understand and exercise their legal rights under EU261/UK261 regulations. Always verify delay times with official sources before claiming.
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor and run the contents of `supabase/schema.sql`
+3. Copy your project URL and service role key
+
+### 3. Configure Environment
+
+Copy `env.template` to `.env.local` and fill in:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+FROM_EMAIL=RyUnfair <notifications@yourdomain.com>
+CRON_SECRET=your-random-secret
+```
+
+### 4. Deploy to Vercel
+
+```bash
+npm run deploy
+# Or connect your GitHub repo to Vercel for auto-deploys
+```
+
+Add the same environment variables in Vercel project settings.
+
+### 5. Set Up Email Domain (Resend)
+
+1. Go to [Resend](https://resend.com) and add your domain
+2. Verify DNS records as instructed
+3. Update `FROM_EMAIL` to use your verified domain
+
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│   Frontend      │────▶│   Vercel API    │────▶│    Supabase     │
+│   (Static)      │     │   (Edge Funcs)  │     │   (Database)    │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                              │
+                              ▼
+                        ┌─────────────────┐
+                        │                 │
+                        │     Resend      │
+                        │    (Emails)     │
+                        │                 │
+                        └─────────────────┘
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/subscribe` | POST | Subscribe for flight notifications |
+| `/api/track-flight` | POST | Track a flight |
+| `/api/verify` | GET | Verify email address |
+| `/api/unsubscribe` | GET | Unsubscribe from emails |
+| `/api/user/data` | GET | Export all user data (GDPR) |
+| `/api/user/data` | DELETE | Delete all user data (GDPR) |
+| `/api/cron/send-notifications` | GET | Send pending emails (cron) |
+
+## GDPR Compliance
+
+This app is designed to be fully UK GDPR compliant:
+
+### Data Collected
+- ✅ Email address (only)
+- ✅ Flight tracking data (number, date, airports)
+- ❌ No names, addresses, or payment info collected
+
+### User Rights Implemented
+- ✅ Right to access (data export)
+- ✅ Right to erasure (data deletion)
+- ✅ Right to withdraw consent (unsubscribe)
+- ✅ Explicit consent before processing
+- ✅ Privacy policy
+
+### Technical Measures
+- ✅ IP addresses hashed (not stored raw)
+- ✅ Audit logging
+- ✅ Soft delete with 30-day retention
+- ✅ Row-level security in database
+- ✅ Encryption in transit (HTTPS)
+
+### ICO Registration
+
+Before going live, register with the [ICO](https://ico.org.uk/for-organisations/register/).
+
+## Email Schedule
+
+When a user subscribes and tracks a flight:
+
+1. **Immediately**: Verification email sent
+2. **When delay confirmed**: Result notification with claim link
+3. **15 days later**: Follow-up asking if they claimed (with donation link)
+4. **30 days later**: Final follow-up (with donation link)
+
+## Local Development
+
+```bash
+# Start development server
+npm run dev
+
+# For static frontend only (no API)
+python3 -m http.server 8080
+```
+
+## Updating the Privacy Policy
+
+Edit `privacy.html` and update:
+- Company name and address
+- ICO registration number
+- Contact email
+- Data Protection Officer details
+
+## Support the Project
+
+If RyUnfair helped you claim compensation, consider donating 5% back to help cover hosting costs and keep this free for others.
+
+## Legal Disclaimer
+
+RyUnfair is not affiliated with Ryanair. This tool helps passengers understand and exercise their legal rights under EU Regulation 261/2004 and UK261. Always verify delay times with official sources before claiming.
 
 ## License
 
-MIT License - Feel free to use, modify, and share.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-Made with ✈️ and frustration by delayed passengers everywhere.
-
+Made with ✈️ by passengers, for passengers.

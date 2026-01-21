@@ -1,6 +1,7 @@
 /**
  * RyUnfair - Flight Delay Compensation Tracker
  * Main application module
+ * UK GDPR Compliant
  */
 
 // ============================================
@@ -10,6 +11,8 @@
 const OPENSKY_API = 'https://opensky-network.org/api';
 const STORAGE_KEY = 'ryunfair_flights';
 const REMINDER_KEY = 'ryunfair_reminders';
+const CONSENT_KEY = 'ryunfair_consent';
+const API_BASE = ''; // Empty for same-origin, or set to your API URL
 
 // Airport database (common Ryanair destinations)
 const AIRPORTS = {
@@ -362,6 +365,9 @@ class UIController {
     this.setupActionButtons();
     this.setupCheatSheet();
     this.loadSavedFlights();
+    this.setupCookieBanner();
+    this.setupDataManagement();
+    this.checkVerificationStatus();
     
     // Listen for tracker updates
     this.tracker.onUpdate((event, data) => {
@@ -696,16 +702,24 @@ class UIController {
     }
   }
   
-  // Reminder system
+  // Reminder system with GDPR consent
   setupReminder() {
     const emailInput = document.getElementById('reminder-email');
     const reminderBtn = document.getElementById('set-reminder');
+    const consentCheckbox = document.getElementById('gdpr-consent');
     
-    reminderBtn.addEventListener('click', () => {
+    reminderBtn.addEventListener('click', async () => {
       const email = emailInput.value.trim();
       
       if (!email || !email.includes('@')) {
         showToast('Please enter a valid email address', 'error');
+        return;
+      }
+      
+      // Check GDPR consent
+      if (!consentCheckbox?.checked) {
+        showToast('Please tick the consent checkbox to continue', 'error');
+        consentCheckbox?.focus();
         return;
       }
       
@@ -714,17 +728,66 @@ class UIController {
         return;
       }
       
-      // Save reminder
-      const reminders = loadFromStorage(REMINDER_KEY) || [];
-      reminders.push({
-        email,
-        flight: this.tracker.currentFlight,
-        created: Date.now()
-      });
-      saveToStorage(REMINDER_KEY, reminders);
+      // Show loading state
+      reminderBtn.disabled = true;
+      reminderBtn.textContent = 'Subscribing...';
       
-      showToast(`Reminder set! We'll email ${email} when your flight qualifies for compensation.`, 'success');
-      emailInput.value = '';
+      try {
+        // Call API to subscribe
+        const response = await fetch(`${API_BASE}/api/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            consent: true,
+            marketingConsent: false,
+            flight: {
+              flightNumber: this.tracker.currentFlight.flightNumber,
+              date: this.tracker.currentFlight.date,
+              departure: this.tracker.currentFlight.departure,
+              arrival: this.tracker.currentFlight.arrival,
+              distance: this.tracker.currentFlight.distance,
+              delayMinutes: this.tracker.currentFlight.delayMinutes,
+              compensation: this.tracker.currentFlight.compensation,
+            }
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          // Also save locally
+          const reminders = loadFromStorage(REMINDER_KEY) || [];
+          reminders.push({
+            email,
+            flight: this.tracker.currentFlight,
+            created: Date.now()
+          });
+          saveToStorage(REMINDER_KEY, reminders);
+          saveToStorage(CONSENT_KEY, { email, timestamp: Date.now() });
+          
+          showToast('Success! Check your email to verify your subscription.', 'success');
+          emailInput.value = '';
+          consentCheckbox.checked = false;
+        } else {
+          showToast(result.error || 'Failed to subscribe. Please try again.', 'error');
+        }
+      } catch (error) {
+        console.error('Subscribe error:', error);
+        // Fallback to local-only if API unavailable
+        const reminders = loadFromStorage(REMINDER_KEY) || [];
+        reminders.push({
+          email,
+          flight: this.tracker.currentFlight,
+          created: Date.now()
+        });
+        saveToStorage(REMINDER_KEY, reminders);
+        showToast(`Reminder saved locally. Email notifications require backend setup.`, 'info');
+        emailInput.value = '';
+      } finally {
+        reminderBtn.disabled = false;
+        reminderBtn.textContent = 'Set Reminder';
+      }
     });
   }
   
@@ -1082,6 +1145,211 @@ Yours faithfully,
         showToast('Failed to copy - please select and copy manually', 'error');
       });
     });
+  }
+  
+  // Cookie consent banner (GDPR)
+  setupCookieBanner() {
+    const banner = document.getElementById('cookie-banner');
+    const acceptBtn = document.getElementById('cookie-accept');
+    const declineBtn = document.getElementById('cookie-decline');
+    
+    // Check if consent already given
+    const consent = loadFromStorage(CONSENT_KEY);
+    if (!consent?.cookieConsent) {
+      banner.style.display = 'block';
+    }
+    
+    acceptBtn?.addEventListener('click', () => {
+      const existing = loadFromStorage(CONSENT_KEY) || {};
+      saveToStorage(CONSENT_KEY, { ...existing, cookieConsent: true, cookieTimestamp: Date.now() });
+      banner.style.display = 'none';
+    });
+    
+    declineBtn?.addEventListener('click', () => {
+      // Clear all local storage except consent record
+      const consent = { cookieConsent: false, cookieTimestamp: Date.now() };
+      localStorage.clear();
+      saveToStorage(CONSENT_KEY, consent);
+      banner.style.display = 'none';
+      showToast('Local storage disabled. Some features may not work.', 'info');
+    });
+  }
+  
+  // Data management modal (GDPR rights)
+  setupDataManagement() {
+    const manageLink = document.getElementById('manage-data-link');
+    const modal = document.getElementById('data-modal');
+    const closeBtn = document.getElementById('close-data-modal');
+    const exportBtn = document.getElementById('export-data');
+    const deleteBtn = document.getElementById('delete-data');
+    const emailInput = document.getElementById('data-email');
+    
+    // Open modal
+    manageLink?.addEventListener('click', (e) => {
+      e.preventDefault();
+      modal.classList.add('show');
+      
+      // Pre-fill email if we have it
+      const consent = loadFromStorage(CONSENT_KEY);
+      if (consent?.email) {
+        emailInput.value = consent.email;
+      }
+    });
+    
+    // Close modal
+    closeBtn?.addEventListener('click', () => {
+      modal.classList.remove('show');
+    });
+    
+    // Close on backdrop click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    });
+    
+    // Export data
+    exportBtn?.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        showToast('Please enter your email address', 'error');
+        return;
+      }
+      
+      try {
+        // First, try API export
+        const response = await fetch(`${API_BASE}/api/user/data?email=${encodeURIComponent(email)}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ryunfair-data-export-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('Data exported successfully!', 'success');
+        } else if (response.status === 404) {
+          // Fall back to local data export
+          this.exportLocalData();
+        } else {
+          showToast('Failed to export data. Please try again.', 'error');
+        }
+      } catch (error) {
+        console.error('Export error:', error);
+        // Fall back to local data
+        this.exportLocalData();
+      }
+    });
+    
+    // Delete data
+    deleteBtn?.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      
+      if (!confirm('Are you sure you want to delete all your data? This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        if (email) {
+          // Try API deletion
+          const response = await fetch(`${API_BASE}/api/user/data?email=${encodeURIComponent(email)}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            showToast('Your data has been marked for deletion.', 'success');
+          }
+        }
+        
+        // Always clear local data
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(REMINDER_KEY);
+        localStorage.removeItem(CONSENT_KEY);
+        
+        modal.classList.remove('show');
+        showToast('Local data deleted successfully.', 'success');
+        
+        // Reload to reset state
+        setTimeout(() => window.location.reload(), 1500);
+        
+      } catch (error) {
+        console.error('Delete error:', error);
+        // Still clear local data
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(REMINDER_KEY);
+        showToast('Local data deleted. Server deletion may require retry.', 'info');
+      }
+    });
+  }
+  
+  // Export local data only (fallback)
+  exportLocalData() {
+    const flights = loadFromStorage(STORAGE_KEY) || [];
+    const reminders = loadFromStorage(REMINDER_KEY) || [];
+    const consent = loadFromStorage(CONSENT_KEY) || {};
+    
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      source: 'local_storage',
+      note: 'This is data stored locally in your browser only.',
+      consent: {
+        cookieConsent: consent.cookieConsent,
+        timestamp: consent.cookieTimestamp,
+      },
+      savedFlights: flights,
+      reminders: reminders.map(r => ({
+        email: r.email,
+        flightNumber: r.flight?.flightNumber,
+        date: r.flight?.date,
+        created: r.created,
+      })),
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ryunfair-local-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Local data exported!', 'success');
+  }
+  
+  // Check for verification status from URL params
+  checkVerificationStatus() {
+    const params = new URLSearchParams(window.location.search);
+    const verified = params.get('verified');
+    const error = params.get('error');
+    
+    if (verified === 'success') {
+      this.showBanner('Email verified successfully! You will now receive flight notifications.', 'success');
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (verified === 'already') {
+      this.showBanner('Your email is already verified.', 'info');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (error === 'invalid_token') {
+      this.showBanner('Invalid or expired verification link.', 'error');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (error === 'missing_token') {
+      this.showBanner('Verification token missing.', 'error');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+  
+  // Show a temporary banner message
+  showBanner(message, type = 'info') {
+    const main = document.querySelector('.main');
+    const banner = document.createElement('div');
+    banner.className = `verification-banner ${type}`;
+    banner.innerHTML = `<p>${message}</p>`;
+    main.insertBefore(banner, main.firstChild);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => banner.remove(), 10000);
   }
 }
 

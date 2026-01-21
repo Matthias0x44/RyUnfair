@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - RyUnfair</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .privacy-content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .privacy-content h1 {
+      color: var(--ryanair-blue);
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .privacy-content .last-updated {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+    .privacy-content h2 {
+      color: var(--ryanair-blue);
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--ryanair-yellow);
+    }
+    .privacy-content h3 {
+      color: var(--text-dark);
+      font-size: 1.1rem;
+      margin-top: 1.5rem;
+    }
+    .privacy-content p, .privacy-content li {
+      color: var(--text-body);
+      line-height: 1.8;
+    }
+    .privacy-content ul {
+      padding-left: 1.5rem;
+    }
+    .privacy-content li {
+      margin-bottom: 0.5rem;
+    }
+    .privacy-content a {
+      color: var(--ryanair-blue);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    .data-table th, .data-table td {
+      border: 1px solid var(--border-light);
+      padding: 12px;
+      text-align: left;
+    }
+    .data-table th {
+      background: var(--bg-light);
+      font-weight: 700;
+      color: var(--ryanair-blue);
+    }
+    .highlight-box {
+      background: var(--ryanair-yellow-light);
+      border-left: 4px solid var(--ryanair-yellow);
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .contact-box {
+      background: var(--bg-light);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <a href="/" style="text-decoration: none;">
+        <span class="logo-ry">Ry</span><span class="logo-unfair">Unfair</span>
+      </a>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-btn">← Back to App</a>
+    </nav>
+  </header>
+
+  <main class="privacy-content">
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last updated: January 2026</p>
+
+    <div class="highlight-box">
+      <strong>Summary:</strong> We only collect your email address. We use it solely to notify you about flight delays and compensation. We never sell your data. You can delete everything at any time.
+    </div>
+
+    <h2>1. Who We Are</h2>
+    <p>RyUnfair is a flight delay compensation tracking service operated by [Your Company Name], registered in England and Wales.</p>
+    <p><strong>Data Controller:</strong> [Your Name/Company]<br>
+    <strong>ICO Registration Number:</strong> [Your ICO Number]<br>
+    <strong>Contact:</strong> privacy@ryunfair.com</p>
+
+    <h2>2. What Data We Collect</h2>
+    <p>We collect the minimum data necessary to provide our service:</p>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Purpose</th>
+          <th>Legal Basis</th>
+          <th>Retention</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Email address</td>
+          <td>Send delay notifications</td>
+          <td>Consent (Art. 6(1)(a))</td>
+          <td>Until you unsubscribe or request deletion</td>
+        </tr>
+        <tr>
+          <td>Flight details (number, date, airports)</td>
+          <td>Track delays and calculate compensation</td>
+          <td>Consent (Art. 6(1)(a))</td>
+          <td>Until you request deletion</td>
+        </tr>
+        <tr>
+          <td>Consent records</td>
+          <td>Prove GDPR compliance</td>
+          <td>Legal obligation (Art. 6(1)(c))</td>
+          <td>7 years (UK legal requirement)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>What We DO NOT Collect</h3>
+    <ul>
+      <li>❌ Your name (not required)</li>
+      <li>❌ Your address (not required)</li>
+      <li>❌ Payment information (handled by third-party if you donate)</li>
+      <li>❌ Booking references or ticket numbers</li>
+      <li>❌ Passport or ID information</li>
+    </ul>
+
+    <h2>3. How We Use Your Data</h2>
+    <p>Your email address is used ONLY to:</p>
+    <ul>
+      <li>Send you a verification email when you sign up</li>
+      <li>Notify you when your tracked flight qualifies for compensation</li>
+      <li>Send two follow-up emails (at 15 and 30 days) asking if we helped you claim</li>
+    </ul>
+    
+    <div class="highlight-box">
+      <strong>We will never:</strong> Sell your data, share it with airlines, send marketing emails (unless you explicitly opt in), or use your data for any purpose other than flight tracking.
+    </div>
+
+    <h2>4. Data Sharing</h2>
+    <p>We share data with the following service providers (all GDPR compliant):</p>
+    <ul>
+      <li><strong>Supabase</strong> (EU region) - Database hosting</li>
+      <li><strong>Resend</strong> - Email delivery</li>
+      <li><strong>Vercel</strong> - Website hosting</li>
+    </ul>
+    <p>We do NOT share your data with Ryanair, other airlines, or any marketing companies.</p>
+
+    <h2>5. Your Rights (GDPR)</h2>
+    <p>Under UK GDPR, you have the following rights:</p>
+    
+    <h3>Right to Access (Article 15)</h3>
+    <p>You can request a copy of all data we hold about you.</p>
+    <p><a href="/api/user/data?email=YOUR_EMAIL">→ Export your data</a></p>
+
+    <h3>Right to Erasure (Article 17)</h3>
+    <p>You can request deletion of all your data at any time.</p>
+    <p><a href="/api/user/data?email=YOUR_EMAIL">→ Delete your data</a></p>
+
+    <h3>Right to Withdraw Consent</h3>
+    <p>You can unsubscribe from emails at any time using the link in every email, or by contacting us.</p>
+
+    <h3>Right to Rectification (Article 16)</h3>
+    <p>Contact us to correct any inaccurate data.</p>
+
+    <h3>Right to Data Portability (Article 20)</h3>
+    <p>You can download your data in machine-readable JSON format.</p>
+
+    <h3>Right to Complain</h3>
+    <p>If you're unhappy with how we handle your data, you can complain to the <a href="https://ico.org.uk/make-a-complaint/" target="_blank">Information Commissioner's Office (ICO)</a>.</p>
+
+    <h2>6. Data Security</h2>
+    <p>We protect your data through:</p>
+    <ul>
+      <li>Encryption in transit (HTTPS/TLS)</li>
+      <li>Encryption at rest (database encryption)</li>
+      <li>IP address hashing (we don't store your raw IP)</li>
+      <li>Row-level security in our database</li>
+      <li>Regular security audits</li>
+    </ul>
+
+    <h2>7. Cookies & Local Storage</h2>
+    <p>We use browser localStorage to:</p>
+    <ul>
+      <li>Remember your tracked flights locally (stays on your device)</li>
+      <li>Remember your cookie consent preference</li>
+    </ul>
+    <p>We do NOT use tracking cookies, analytics, or any third-party cookies.</p>
+
+    <h2>8. Data Retention</h2>
+    <ul>
+      <li><strong>Active accounts:</strong> Data kept until you request deletion</li>
+      <li><strong>After deletion request:</strong> Data anonymised within 24 hours, permanently deleted within 30 days</li>
+      <li><strong>Audit logs:</strong> Kept for 7 years (UK legal requirement)</li>
+    </ul>
+
+    <h2>9. International Transfers</h2>
+    <p>Your data is processed in the EU/UK. Our service providers (Supabase, Vercel, Resend) have data processing agreements ensuring GDPR compliance.</p>
+
+    <h2>10. Children's Privacy</h2>
+    <p>Our service is not directed at children under 16. We do not knowingly collect data from children.</p>
+
+    <h2>11. Changes to This Policy</h2>
+    <p>We'll notify you of any significant changes via email. Minor changes will be posted here with an updated date.</p>
+
+    <div class="contact-box">
+      <h2 style="margin-top: 0;">Contact Us</h2>
+      <p>For any privacy-related questions or to exercise your rights:</p>
+      <p>
+        <strong>Email:</strong> privacy@ryunfair.com<br>
+        <strong>Data Protection Officer:</strong> [Your Name]<br>
+        <strong>Address:</strong> [Your Address]
+      </p>
+      <p>We aim to respond to all requests within 30 days.</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>RyUnfair is registered with the Information Commissioner's Office (ICO).</p>
+    <p class="disclaimer">ICO Registration: [Your Number] | © 2026 RyUnfair</p>
+  </footer>
+</body>
+</html>
+

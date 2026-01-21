@@ -67,6 +67,13 @@
               <input type="email" id="reminder-email" placeholder="your@email.com">
               <button type="button" id="set-reminder" class="btn-secondary">Set Reminder</button>
             </div>
+            <div class="consent-section">
+              <label class="consent-checkbox">
+                <input type="checkbox" id="gdpr-consent" required>
+                <span class="checkmark"></span>
+                <span class="consent-text">I consent to RyUnfair storing my email and flight data to send delay notifications. <a href="/privacy.html" target="_blank">Privacy Policy</a></span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -556,10 +563,44 @@
   <footer class="footer">
     <p>RyUnfair is not affiliated with Ryanair. This tool helps passengers understand and exercise their legal rights under EU261/UK261.</p>
     <p class="disclaimer">Flight data provided by OpenSky Network. Always verify delay times with official sources before claiming.</p>
+    <div class="footer-links">
+      <a href="/privacy.html">Privacy Policy</a>
+      <span>|</span>
+      <a href="#" id="manage-data-link">Manage My Data</a>
+      <span>|</span>
+      <span>ICO Registered</span>
+    </div>
   </footer>
 
+  <!-- Cookie Consent Banner -->
+  <div id="cookie-banner" class="cookie-banner" style="display: none;">
+    <div class="cookie-content">
+      <p>We use localStorage to save your flight data locally and remember your preferences. We don't use tracking cookies. <a href="/privacy.html">Learn more</a></p>
+      <div class="cookie-buttons">
+        <button id="cookie-accept" class="btn-primary">Accept</button>
+        <button id="cookie-decline" class="btn-secondary">Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Management Modal -->
+  <div id="data-modal" class="modal">
+    <div class="modal-content">
+      <h2>Manage Your Data</h2>
+      <p>Enter your email to export or delete your data from RyUnfair.</p>
+      <div class="form-group">
+        <label for="data-email">Email Address</label>
+        <input type="email" id="data-email" placeholder="your@email.com">
+      </div>
+      <div class="modal-actions">
+        <button id="export-data" class="btn-secondary">📥 Export My Data</button>
+        <button id="delete-data" class="btn-secondary" style="color: var(--danger);">🗑️ Delete My Data</button>
+      </div>
+      <button id="close-data-modal" class="btn-action" style="margin-top: 1rem; width: 100%;">Close</button>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
-  <div id="modal" class="modal"></div>
 
   <script src="app.js" type="module"></script>
 </body>

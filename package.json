@@ -1,0 +1,27 @@
+{
+  "name": "ryunfair",
+  "version": "1.0.0",
+  "description": "Track Ryanair flight delays and claim compensation under EU261/UK261",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "mkdir -p public && cp index.html styles.css app.js privacy.html public/",
+    "deploy": "vercel --prod",
+    "lint": "eslint api/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "resend": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.3.0",
+    "vercel": "^33.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
