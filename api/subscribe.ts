@@ -10,10 +10,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let supabase: SupabaseClient;
 function getSupabase() {
   if (!supabase) {
-    supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(`Missing Supabase env vars: URL=${!!supabaseUrl}, KEY=${!!supabaseKey}`);
+    }
+    
+    supabase = createClient(supabaseUrl, supabaseKey);
   }
   return supabase;
 }
@@ -32,11 +36,23 @@ export const config = {
   runtime: 'edge',
 };
 
+// CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 export default async function handler(request: Request) {
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 
@@ -48,7 +64,7 @@ export default async function handler(request: Request) {
     if (!email || typeof consent !== 'boolean') {
       return new Response(
         JSON.stringify({ error: 'Email and consent are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -56,7 +72,7 @@ export default async function handler(request: Request) {
     if (!consent) {
       return new Response(
         JSON.stringify({ error: 'Explicit consent is required to process your data' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -65,7 +81,7 @@ export default async function handler(request: Request) {
     if (!emailRegex.test(email)) {
       return new Response(
         JSON.stringify({ error: 'Invalid email format' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
@@ -120,8 +136,11 @@ export default async function handler(request: Request) {
       if (error) {
         console.error('Error creating user:', error);
         return new Response(
-          JSON.stringify({ error: 'Failed to create subscription' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            error: 'Failed to create subscription',
+            details: error.message
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
@@ -180,14 +199,18 @@ export default async function handler(request: Request) {
         message: 'Subscription created. Please check your email to verify.',
         userId,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
 
   } catch (error) {
     console.error('Subscribe error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: errorMessage
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 }
