@@ -39,9 +39,9 @@ export const config = {
   runtime: 'edge',
 };
 
-// Email templates
+// Email templates - all receive the full notification object from pending_notifications view
 const templates = {
-  verification: (verificationToken: string) => ({
+  verification: (data: any) => ({
     subject: 'Verify your email for RyUnfair',
     html: `
       <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f7fa;">
@@ -56,7 +56,7 @@ const templates = {
             Thanks for signing up to track your Ryanair flights! Please verify your email to receive notifications about delays and compensation.
           </p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/verify?token=${verificationToken}" 
+            <a href="${APP_URL}/api/verify?token=${data.verification_token}" 
                style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
               Verify Email
             </a>
@@ -67,7 +67,7 @@ const templates = {
         </div>
         <div style="padding: 16px; text-align: center; color: #666; font-size: 12px;">
           <p>RyUnfair - Know your rights. Get your money.</p>
-          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/api/user/data?email=YOUREMAIL" style="color: #073590;">Manage Your Data</a></p>
+          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/api/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #073590;">Unsubscribe</a></p>
         </div>
       </div>
     `,

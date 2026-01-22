@@ -269,8 +269,10 @@ CREATE VIEW pending_notifications AS
 SELECT 
     n.*,
     u.email,
+    u.verification_token,
     f.flight_number,
     f.flight_date,
+    f.delay_minutes,
     f.compensation_amount,
     f.compensation_currency
 FROM notifications n
@@ -279,7 +281,13 @@ LEFT JOIN tracked_flights f ON n.flight_id = f.id
 WHERE n.status = 'pending'
     AND n.scheduled_for <= NOW()
     AND u.deleted_at IS NULL
-    AND u.email_verified = TRUE;
+    AND u.consent_given = TRUE
+    AND (
+        -- Verification emails can be sent to unverified users
+        n.type = 'verification'
+        -- All other emails require verified email
+        OR u.email_verified = TRUE
+    );
 
 -- View: User data export (GDPR compliance)
 CREATE VIEW user_data_export AS
