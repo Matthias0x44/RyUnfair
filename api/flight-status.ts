@@ -7,6 +7,9 @@ export const config = {
   runtime: 'edge',
 };
 
+// AviationStack API
+// IMPORTANT: Free tier ONLY supports HTTP, paid tiers support HTTPS
+// Since Edge functions can make HTTP requests, we use HTTP for free tier compatibility
 const AVIATIONSTACK_API = 'http://api.aviationstack.com/v1';
 
 interface FlightResponse {
