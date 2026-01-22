@@ -449,23 +449,79 @@ export default async function handler(request: Request) {
     const db = getSupabase();
     const emailClient = getResend();
 
-    // Get pending notifications that are due
-    const { data: notifications, error } = await db
-      .from('pending_notifications')
+    // Get pending notifications directly (bypassing view for RLS compatibility)
+    // First get pending notifications
+    const { data: pendingNotifications, error: notifError } = await db
+      .from('notifications')
       .select('*')
+      .eq('status', 'pending')
+      .lte('scheduled_for', new Date().toISOString())
       .limit(50);
 
-    if (error) {
-      console.error('Error fetching notifications:', error);
+    if (notifError) {
+      console.error('Error fetching notifications:', notifError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch notifications', details: error.message, code: error.code }),
+        JSON.stringify({ error: 'Failed to fetch notifications', details: notifError.message, code: notifError.code }),
         { status: 500, headers: corsHeaders }
       );
     }
 
-    if (!notifications || notifications.length === 0) {
+    if (!pendingNotifications || pendingNotifications.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'No pending notifications in view', envCheck }),
+        JSON.stringify({ message: 'No pending notifications', envCheck }),
+        { status: 200, headers: corsHeaders }
+      );
+    }
+
+    // Enrich notifications with user and flight data
+    const notifications: any[] = [];
+    for (const notif of pendingNotifications) {
+      // Get user data
+      const { data: user } = await db
+        .from('users')
+        .select('email, verification_token, consent_given, email_verified, deleted_at')
+        .eq('id', notif.user_id)
+        .single();
+
+      if (!user || user.deleted_at || !user.consent_given) {
+        continue; // Skip if user deleted or no consent
+      }
+
+      // For non-verification emails, require verified email
+      if (notif.type !== 'verification' && !user.email_verified) {
+        continue;
+      }
+
+      // Get flight data if applicable
+      let flight = null;
+      if (notif.flight_id) {
+        const { data: flightData } = await db
+          .from('tracked_flights')
+          .select('flight_number, flight_date, delay_minutes, compensation_amount, compensation_currency')
+          .eq('id', notif.flight_id)
+          .single();
+        flight = flightData;
+      }
+
+      notifications.push({
+        ...notif,
+        email: user.email,
+        verification_token: user.verification_token,
+        flight_number: flight?.flight_number,
+        flight_date: flight?.flight_date,
+        delay_minutes: flight?.delay_minutes,
+        compensation_amount: flight?.compensation_amount,
+        compensation_currency: flight?.compensation_currency,
+      });
+    }
+
+    if (notifications.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          message: 'No eligible notifications (users may lack consent or verification)', 
+          rawCount: pendingNotifications.length,
+          envCheck 
+        }),
         { status: 200, headers: corsHeaders }
       );
     }
