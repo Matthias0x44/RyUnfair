@@ -479,11 +479,12 @@ export default async function handler(request: Request) {
     for (const notification of notifications) {
       try {
         // Get template (handle legacy alias)
-        let templateKey = notification.template_used as keyof typeof templates;
-        if (templateKey === 'email_verification') {
-          templateKey = 'verification';
+        let templateName = notification.template_used as string;
+        if (templateName === 'email_verification') {
+          templateName = 'verification';
         }
         
+        const templateKey = templateName as keyof typeof templates;
         const templateFn = templates[templateKey];
         if (!templateFn) {
           results.push({ id: notification.id, error: `Unknown template: ${notification.template_used}` });
