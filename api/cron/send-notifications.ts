@@ -41,185 +41,373 @@ export const config = {
 
 // Email templates - all receive the full notification object from pending_notifications view
 const templates = {
+  // ============================================
+  // 1. VERIFICATION EMAIL - Sent immediately on signup
+  // ============================================
   verification: (data: any) => ({
-    subject: 'Verify your email for RyUnfair',
+    subject: '✈️ Verify your email to track flight delays',
     html: `
-      <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f7fa;">
-        <div style="background: #073590; padding: 24px; text-align: center;">
-          <h1 style="color: #f1c933; margin: 0; font-size: 28px;">
-            <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
-          </h1>
-        </div>
-        <div style="padding: 32px; background: white;">
-          <h2 style="color: #073590; margin-top: 0;">Verify your email</h2>
-          <p style="color: #333; line-height: 1.6;">
-            Thanks for signing up to track your Ryanair flights! Please verify your email to receive notifications about delays and compensation.
-          </p>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/api/verify?token=${data.verification_token}" 
-               style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">
-              Verify Email
-            </a>
-          </div>
-          <p style="color: #666; font-size: 14px;">
-            If you didn't sign up for RyUnfair, you can ignore this email.
-          </p>
-        </div>
-        <div style="padding: 16px; text-align: center; color: #666; font-size: 12px;">
-          <p>RyUnfair - Know your rights. Get your money.</p>
-          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/api/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #073590;">Unsubscribe</a></p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #073590 0%, #0a4bc4 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">
+                      <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
+                    </h1>
+                    <p style="margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Know your rights. Get your money.</p>
+                  </td>
+                </tr>
+                
+                <!-- Body -->
+                <tr>
+                  <td style="background: white; padding: 40px 32px;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                      <span style="font-size: 48px;">📧</span>
+                    </div>
+                    
+                    <h2 style="color: #073590; margin: 0 0 16px; font-size: 24px; text-align: center;">One click to start tracking</h2>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; text-align: center; margin: 0 0 32px;">
+                      Thanks for signing up! Verify your email to receive instant notifications when your Ryanair flight is delayed enough for compensation.
+                    </p>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                      <a href="${APP_URL}/api/verify?token=${data.verification_token}" 
+                         style="background: #f1c933; color: #073590; padding: 18px 48px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; font-size: 16px; box-shadow: 0 4px 14px rgba(241, 201, 51, 0.4);">
+                        Verify My Email →
+                      </a>
+                    </div>
+                    
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-top: 32px;">
+                      <p style="color: #64748b; font-size: 14px; margin: 0; text-align: center;">
+                        <strong>What happens next?</strong><br>
+                        We'll monitor your tracked flights and email you the moment a delay qualifies for EU261/UK261 compensation.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f8fafc; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">
+                      Didn't sign up for RyUnfair? Just ignore this email.
+                    </p>
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                      <a href="${APP_URL}/privacy.html" style="color: #073590;">Privacy Policy</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   }),
 
+  // ============================================
+  // 2. DELAY CONFIRMED - Compensation eligible notification
+  // ============================================
   flight_result_eligible: (data: any) => ({
-    subject: `Great news! Your ${data.flight_number} flight qualifies for ${data.compensation_currency}${data.compensation_amount}`,
+    subject: `💰 ${data.flight_number}: You're owed ${data.compensation_currency}${data.compensation_amount} compensation!`,
     html: `
-      <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f7fa;">
-        <div style="background: #073590; padding: 24px; text-align: center;">
-          <h1 style="color: #f1c933; margin: 0; font-size: 28px;">
-            <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
-          </h1>
-        </div>
-        <div style="padding: 32px; background: white;">
-          <h2 style="color: #073590; margin-top: 0;">🎉 You're owed compensation!</h2>
-          
-          <div style="background: #f5f7fa; border-radius: 8px; padding: 24px; margin: 24px 0;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Flight</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">${data.flight_number}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Date</td>
-                <td style="padding: 8px 0; text-align: right;">${new Date(data.flight_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #666;">Delay</td>
-                <td style="padding: 8px 0; color: #dc3545; font-weight: bold; text-align: right;">${Math.floor(data.delay_minutes / 60)}h ${data.delay_minutes % 60}m</td>
-              </tr>
-              <tr style="border-top: 2px solid #073590;">
-                <td style="padding: 16px 0 8px; color: #073590; font-weight: bold; font-size: 18px;">You're owed</td>
-                <td style="padding: 16px 0 8px; color: #073590; font-weight: bold; font-size: 24px; text-align: right;">${data.compensation_currency}${data.compensation_amount}</td>
-              </tr>
-            </table>
-          </div>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261" 
-               style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block; font-size: 16px;">
-              Claim Your ${data.compensation_currency}${data.compensation_amount} Now →
-            </a>
-          </div>
-
-          <p style="color: #333; line-height: 1.6;">
-            Under EU261/UK261 law, you're legally entitled to this compensation. Ryanair MUST pay you - it's not optional!
-          </p>
-          
-          <p style="color: #666; font-size: 14px; margin-top: 24px;">
-            Need help with your claim? Visit <a href="${APP_URL}" style="color: #073590;">RyUnfair</a> for our step-by-step guide and cheat sheet.
-          </p>
-        </div>
-        <div style="padding: 16px; text-align: center; color: #666; font-size: 12px;">
-          <p>RyUnfair - Know your rights. Get your money.</p>
-          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #073590;">Unsubscribe</a></p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #073590 0%, #0a4bc4 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">
+                      <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
+                    </h1>
+                  </td>
+                </tr>
+                
+                <!-- Celebration Banner -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 24px; text-align: center;">
+                    <span style="font-size: 40px;">🎉</span>
+                    <h2 style="color: white; margin: 12px 0 0; font-size: 22px;">Great news! You're owed money!</h2>
+                  </td>
+                </tr>
+                
+                <!-- Body -->
+                <tr>
+                  <td style="background: white; padding: 40px 32px;">
+                    <!-- Flight Details Card -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 2px solid #e2e8f0;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Flight</td>
+                          <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #1e293b; font-size: 16px;">${data.flight_number}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Date</td>
+                          <td style="padding: 8px 0; text-align: right; color: #1e293b; font-size: 14px;">${data.flight_date ? new Date(data.flight_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Delay</td>
+                          <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #dc2626; font-size: 16px;">${data.delay_minutes ? `${Math.floor(data.delay_minutes / 60)}h ${data.delay_minutes % 60}m` : '3+ hours'}</td>
+                        </tr>
+                      </table>
+                      
+                      <div style="border-top: 2px dashed #e2e8f0; margin: 16px 0; padding-top: 16px;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="color: #073590; font-weight: 700; font-size: 18px;">You're owed</td>
+                            <td style="text-align: right; color: #073590; font-weight: 900; font-size: 32px;">${data.compensation_currency}${data.compensation_amount}</td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; text-align: center; margin: 0 0 24px;">
+                      Under <strong>EU261/UK261 law</strong>, Ryanair is legally required to pay you this compensation. It's not optional!
+                    </p>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                      <a href="https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261" 
+                         style="background: #f1c933; color: #073590; padding: 18px 40px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; font-size: 18px; box-shadow: 0 4px 14px rgba(241, 201, 51, 0.4);">
+                        Claim My ${data.compensation_currency}${data.compensation_amount} Now →
+                      </a>
+                    </div>
+                    
+                    <!-- Tips Box -->
+                    <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 20px; margin-top: 32px;">
+                      <p style="color: #92400e; font-size: 14px; margin: 0 0 12px; font-weight: 700;">💡 Claim Tips:</p>
+                      <ul style="color: #92400e; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.8;">
+                        <li>Have your booking reference ready</li>
+                        <li><strong>Never accept vouchers</strong> - insist on cash</li>
+                        <li>Each passenger can claim separately</li>
+                      </ul>
+                    </div>
+                    
+                    <p style="color: #64748b; font-size: 14px; margin: 24px 0 0; text-align: center;">
+                      Need help? Check our <a href="${APP_URL}/#guide" style="color: #073590; font-weight: 600;">step-by-step guide</a> or <a href="${APP_URL}/#cheatsheet" style="color: #073590; font-weight: 600;">cheat sheet</a>.
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f8fafc; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                      <a href="${APP_URL}/privacy.html" style="color: #64748b;">Privacy</a> · 
+                      <a href="${APP_URL}/api/unsubscribe?email=${encodeURIComponent(data.email || '')}" style="color: #64748b;">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   }),
 
+  // ============================================
+  // 3. 15-DAY FOLLOW-UP - First donation ask
+  // ============================================
   followup_donation: (data: any) => ({
-    subject: 'Did RyUnfair help you get compensation?',
+    subject: `Did you claim your ${data.compensation_currency}${data.compensation_amount}? Quick question...`,
     html: `
-      <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f7fa;">
-        <div style="background: #073590; padding: 24px; text-align: center;">
-          <h1 style="color: #f1c933; margin: 0; font-size: 28px;">
-            <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
-          </h1>
-        </div>
-        <div style="padding: 32px; background: white;">
-          <h2 style="color: #073590; margin-top: 0;">Did we help you get your money back?</h2>
-          
-          <p style="color: #333; line-height: 1.6;">
-            Hi! About two weeks ago, we notified you that your flight <strong>${data.flight_number}</strong> was delayed enough to qualify for <strong>${data.compensation_currency}${data.compensation_amount}</strong> compensation.
-          </p>
-          
-          <p style="color: #333; line-height: 1.6;">
-            If RyUnfair helped you successfully claim your compensation, we'd be incredibly grateful if you could donate <strong>5% of your compensation</strong> (${data.compensation_currency}${(data.compensation_amount * 0.05).toFixed(2)}) to help us cover server costs and keep this free service running for others.
-          </p>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/donate?amount=${(data.compensation_amount * 0.05).toFixed(2)}&currency=${data.compensation_currency}&flight=${data.flight_number}" 
-               style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block; font-size: 16px;">
-              Donate ${data.compensation_currency}${(data.compensation_amount * 0.05).toFixed(2)}
-            </a>
-          </div>
-
-          <p style="color: #666; font-size: 14px;">
-            💡 <em>100% of donations go towards keeping RyUnfair free and helping more passengers claim what they're owed.</em>
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #e0e4e8; margin: 24px 0;">
-          
-          <p style="color: #333; line-height: 1.6;">
-            <strong>Haven't claimed yet?</strong> You still have time! Visit Ryanair's claim portal or check our <a href="${APP_URL}/#guide" style="color: #073590;">step-by-step guide</a>.
-          </p>
-        </div>
-        <div style="padding: 16px; text-align: center; color: #666; font-size: 12px;">
-          <p>RyUnfair - Know your rights. Get your money.</p>
-          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #073590;">Unsubscribe</a></p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #073590 0%, #0a4bc4 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">
+                      <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
+                    </h1>
+                  </td>
+                </tr>
+                
+                <!-- Body -->
+                <tr>
+                  <td style="background: white; padding: 40px 32px;">
+                    <h2 style="color: #073590; margin: 0 0 24px; font-size: 24px; text-align: center;">Did we help you get paid? 🤔</h2>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; margin: 0 0 16px;">
+                      Hi! Two weeks ago, we notified you that your flight <strong>${data.flight_number}</strong> qualified for <strong>${data.compensation_currency}${data.compensation_amount}</strong> in compensation.
+                    </p>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; margin: 0 0 24px;">
+                      If RyUnfair helped you successfully claim your money, would you consider paying it forward with a small donation?
+                    </p>
+                    
+                    <!-- Donation Ask -->
+                    <div style="background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; border: 2px solid #fde047;">
+                      <p style="color: #854d0e; font-size: 14px; margin: 0 0 8px;">Suggested: 5% of your compensation</p>
+                      <p style="color: #073590; font-size: 36px; font-weight: 900; margin: 0;">${data.compensation_currency}${data.compensation_amount ? (data.compensation_amount * 0.05).toFixed(2) : '12.50'}</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 24px 0;">
+                      <a href="${APP_URL}/donate?amount=${data.compensation_amount ? (data.compensation_amount * 0.05).toFixed(2) : '12.50'}&currency=${data.compensation_currency || 'EUR'}&flight=${data.flight_number || ''}" 
+                         style="background: #f1c933; color: #073590; padding: 16px 40px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; font-size: 16px; box-shadow: 0 4px 14px rgba(241, 201, 51, 0.4);">
+                        Donate & Support RyUnfair ❤️
+                      </a>
+                    </div>
+                    
+                    <p style="color: #64748b; font-size: 14px; text-align: center; margin: 24px 0 0;">
+                      100% of donations go towards keeping RyUnfair free for everyone.
+                    </p>
+                    
+                    <!-- Divider -->
+                    <div style="border-top: 1px solid #e2e8f0; margin: 32px 0;"></div>
+                    
+                    <!-- Haven't Claimed Yet -->
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 20px;">
+                      <p style="color: #475569; font-size: 14px; margin: 0; text-align: center;">
+                        <strong>Haven't claimed yet?</strong> No worries - you still have time!<br>
+                        <a href="https://www.ryanair.com/ee/en/myryanair/requests/new/eu-261" style="color: #073590; font-weight: 600;">Claim your ${data.compensation_currency}${data.compensation_amount} now →</a>
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f8fafc; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                      <a href="${APP_URL}/privacy.html" style="color: #64748b;">Privacy</a> · 
+                      <a href="${APP_URL}/api/unsubscribe?email=${encodeURIComponent(data.email || '')}" style="color: #64748b;">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   }),
 
+  // ============================================
+  // 4. 30-DAY FOLLOW-UP - Final donation ask
+  // ============================================
   followup_donation_final: (data: any) => ({
-    subject: 'Last chance: Help us help others',
+    subject: `Final reminder: ${data.flight_number} compensation follow-up`,
     html: `
-      <div style="font-family: 'Roboto', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f5f7fa;">
-        <div style="background: #073590; padding: 24px; text-align: center;">
-          <h1 style="color: #f1c933; margin: 0; font-size: 28px;">
-            <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
-          </h1>
-        </div>
-        <div style="padding: 32px; background: white;">
-          <h2 style="color: #073590; margin-top: 0;">One last ask 🙏</h2>
-          
-          <p style="color: #333; line-height: 1.6;">
-            A month ago, we helped identify that your flight <strong>${data.flight_number}</strong> qualified for <strong>${data.compensation_currency}${data.compensation_amount}</strong> in compensation.
-          </p>
-          
-          <p style="color: #333; line-height: 1.6;">
-            If you successfully claimed (or plan to), please consider a small donation to keep RyUnfair running. Every contribution helps us fight for passengers' rights against airlines that make claiming deliberately difficult.
-          </p>
-
-          <div style="background: #f5f7fa; border-radius: 8px; padding: 24px; margin: 24px 0; text-align: center;">
-            <p style="margin: 0 0 16px; color: #666;">Suggested donation (5% of compensation):</p>
-            <p style="margin: 0; font-size: 32px; font-weight: bold; color: #073590;">${data.compensation_currency}${(data.compensation_amount * 0.05).toFixed(2)}</p>
-          </div>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/donate?amount=${(data.compensation_amount * 0.05).toFixed(2)}&currency=${data.compensation_currency}&flight=${data.flight_number}" 
-               style="background: #f1c933; color: #073590; padding: 16px 32px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block; font-size: 16px;">
-              Support RyUnfair
-            </a>
-            <p style="margin-top: 16px;">
-              <a href="${APP_URL}/donate?amount=5&currency=GBP" style="color: #073590; text-decoration: underline;">Or donate any amount →</a>
-            </p>
-          </div>
-
-          <p style="color: #666; font-size: 14px; text-align: center;">
-            This is our final follow-up email about this flight. Thank you! ✈️
-          </p>
-        </div>
-        <div style="padding: 16px; text-align: center; color: #666; font-size: 12px;">
-          <p>RyUnfair - Know your rights. Get your money.</p>
-          <p><a href="${APP_URL}/privacy" style="color: #073590;">Privacy Policy</a> | <a href="${APP_URL}/unsubscribe?email=${encodeURIComponent(data.email)}" style="color: #073590;">Unsubscribe</a></p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #073590 0%, #0a4bc4 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">
+                      <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
+                    </h1>
+                  </td>
+                </tr>
+                
+                <!-- Body -->
+                <tr>
+                  <td style="background: white; padding: 40px 32px;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                      <span style="font-size: 48px;">🙏</span>
+                    </div>
+                    
+                    <h2 style="color: #073590; margin: 0 0 24px; font-size: 24px; text-align: center;">One last ask</h2>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; margin: 0 0 16px;">
+                      A month ago, we helped you discover that flight <strong>${data.flight_number}</strong> qualified for <strong>${data.compensation_currency}${data.compensation_amount}</strong> compensation.
+                    </p>
+                    
+                    <p style="color: #4a5568; line-height: 1.7; font-size: 16px; margin: 0 0 24px;">
+                      RyUnfair is a passion project that costs real money to run. If we helped you get compensated, a small donation would help us keep fighting for passengers' rights.
+                    </p>
+                    
+                    <!-- Impact Stats -->
+                    <div style="display: table; width: 100%; margin: 24px 0;">
+                      <div style="display: table-cell; width: 50%; text-align: center; padding: 16px; background: #f8fafc; border-radius: 8px 0 0 8px;">
+                        <p style="color: #073590; font-size: 24px; font-weight: 900; margin: 0;">€250-600</p>
+                        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0;">Average claim value</p>
+                      </div>
+                      <div style="display: table-cell; width: 50%; text-align: center; padding: 16px; background: #f8fafc; border-radius: 0 8px 8px 0;">
+                        <p style="color: #073590; font-size: 24px; font-weight: 900; margin: 0;">6 years</p>
+                        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0;">UK claim window</p>
+                      </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                      <a href="${APP_URL}/donate?amount=${data.compensation_amount ? (data.compensation_amount * 0.05).toFixed(2) : '12.50'}&currency=${data.compensation_currency || 'EUR'}&flight=${data.flight_number || ''}" 
+                         style="background: #f1c933; color: #073590; padding: 16px 40px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; font-size: 16px; box-shadow: 0 4px 14px rgba(241, 201, 51, 0.4);">
+                        Support RyUnfair
+                      </a>
+                      <p style="margin: 16px 0 0;">
+                        <a href="${APP_URL}/donate" style="color: #073590; font-size: 14px;">Or donate any amount →</a>
+                      </p>
+                    </div>
+                    
+                    <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-top: 24px; text-align: center;">
+                      <p style="color: #991b1b; font-size: 13px; margin: 0;">
+                        📬 This is our final email about this flight. Thanks for using RyUnfair!
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f8fafc; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                      <a href="${APP_URL}/privacy.html" style="color: #64748b;">Privacy</a> · 
+                      <a href="${APP_URL}/api/unsubscribe?email=${encodeURIComponent(data.email || '')}" style="color: #64748b;">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   }),
+
+  // ============================================
+  // LEGACY: email_verification (alias for verification)
+  // ============================================
+  email_verification: (data: any) => templates.verification(data),
 };
 
 export default async function handler(request: Request) {
