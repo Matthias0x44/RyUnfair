@@ -511,16 +511,25 @@ class UIController {
         arrAirport.country
       );
       
-      // Combine all data
+      // Combine all data - use real times from API if available
+      const scheduledArr = flightData.scheduledArrival 
+        ? new Date(flightData.scheduledArrival)
+        : this.generateScheduledTime(date, '14:30');
+      const estimatedArr = flightData.actualArrival 
+        ? new Date(flightData.actualArrival)
+        : (flightData.scheduledArrival 
+            ? new Date(new Date(flightData.scheduledArrival).getTime() + (flightData.delayMinutes || 0) * 60000)
+            : this.generateScheduledTime(date, '14:30', flightData.delayMinutes));
+      
       const fullFlightData = {
         ...flightData,
         ...flightInfo,
         depAirport,
         arrAirport,
         distance,
-        compensation,
-        scheduledArrival: this.generateScheduledTime(date, '14:30'),
-        estimatedArrival: this.generateScheduledTime(date, '14:30', flightData.delayMinutes)
+        compensation: flightData.compensation || compensation, // Prefer API compensation calc
+        scheduledArrival: scheduledArr,
+        estimatedArrival: estimatedArr
       };
       
       // Start tracking
@@ -967,11 +976,8 @@ class UIController {
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = '<div class="loading"></div><p style="text-align: center; margin-top: 1rem;">Searching historical records...</p>';
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Get flight data (simulated for historic)
-    const flightData = simulateFlightData(flightInfo.flightNumber, flightInfo.date);
+    // Get real flight data from API
+    const flightData = await searchFlight(flightInfo.flightNumber, flightInfo.date);
     
     // Get airport info
     const depAirport = AIRPORTS[flightInfo.departure] || { name: flightInfo.departure || 'Unknown', country: 'GB' };

@@ -404,10 +404,6 @@ const templates = {
     `,
   }),
 
-  // ============================================
-  // LEGACY: email_verification (alias for verification)
-  // ============================================
-  email_verification: (data: any) => templates.verification(data),
 };
 
 export default async function handler(request: Request) {
@@ -478,12 +474,20 @@ export default async function handler(request: Request) {
     let failed = 0;
     const results: any[] = [];
 
+    let skipped = 0;
+    
     for (const notification of notifications) {
       try {
-        // Get template
-        const templateFn = templates[notification.template_used as keyof typeof templates];
+        // Get template (handle legacy alias)
+        let templateKey = notification.template_used as keyof typeof templates;
+        if (templateKey === 'email_verification') {
+          templateKey = 'verification';
+        }
+        
+        const templateFn = templates[templateKey];
         if (!templateFn) {
           results.push({ id: notification.id, error: `Unknown template: ${notification.template_used}` });
+          skipped++;
           continue;
         }
 
@@ -542,6 +546,7 @@ export default async function handler(request: Request) {
         processed: notifications.length,
         sent,
         failed,
+        skipped,
         results,
         config: { from: FROM_EMAIL }
       }),
