@@ -181,40 +181,86 @@ function saveToStorage(key, data) {
 // ============================================
 
 /**
- * Search for flight using OpenSky Network API
+ * Search for flight using our API (which uses AviationStack)
  */
 async function searchFlight(flightNumber, date) {
-  // Note: OpenSky has limited free API access
-  // We'll use their states/all endpoint for real-time tracking
-  // and flights/aircraft endpoint for historical data
-  
-  const icao24 = await getAircraftIcao(flightNumber);
-  
-  if (!icao24) {
-    // If we can't get the aircraft, simulate with reasonable data
-    return simulateFlightData(flightNumber, date);
-  }
-  
   try {
-    const response = await fetch(`${OPENSKY_API}/states/all?icao24=${icao24}`);
-    if (!response.ok) throw new Error('API request failed');
-    
+    const response = await fetch(`${API_BASE}/api/flight-status?flight=${encodeURIComponent(flightNumber)}&date=${encodeURIComponent(date)}`);
     const data = await response.json();
-    return parseOpenSkyData(data, flightNumber);
+    
+    if (!response.ok || data.error) {
+      console.warn('Flight API error:', data.error || 'Unknown error');
+      // Fall back to simulation if API fails
+      return simulateFlightData(flightNumber, date);
+    }
+    
+    // Transform API response to our internal format
+    return {
+      flightNumber: data.flight.flightNumber,
+      date: data.flight.date,
+      delayMinutes: data.delay.minutes || 0,
+      isLive: data.flight.status === 'active' || data.flight.status === 'en-route',
+      status: mapFlightStatus(data.flight.status),
+      departure: data.flight.departure.iata,
+      arrival: data.flight.arrival.iata,
+      departureAirport: data.flight.departure.airport,
+      arrivalAirport: data.flight.arrival.airport,
+      scheduledDeparture: data.flight.departure.scheduled,
+      scheduledArrival: data.flight.arrival.scheduled,
+      actualDeparture: data.flight.departure.actual,
+      actualArrival: data.flight.arrival.actual || data.flight.arrival.estimated,
+      progress: calculateProgress(data.flight),
+      compensation: data.compensation,
+      raw: data.raw, // For debugging
+    };
   } catch (error) {
-    console.error('OpenSky API error:', error);
+    console.error('Flight search error:', error);
+    // Fall back to simulation if network fails
     return simulateFlightData(flightNumber, date);
   }
 }
 
 /**
- * Get aircraft ICAO24 from callsign/flight number
- * Note: This is simplified - real implementation would need a database
+ * Map AviationStack status to our internal status
  */
-async function getAircraftIcao(flightNumber) {
-  // Ryanair's ICAO prefix is RYR
-  // This is a simplified lookup - in production you'd use a flight database
-  return null; // Return null to use simulation for demo
+function mapFlightStatus(status) {
+  const statusMap = {
+    'scheduled': 'scheduled',
+    'active': 'in_flight',
+    'en-route': 'in_flight',
+    'landed': 'arrived',
+    'arrived': 'arrived',
+    'cancelled': 'cancelled',
+    'diverted': 'diverted',
+    'unknown': 'unknown',
+  };
+  return statusMap[status] || 'unknown';
+}
+
+/**
+ * Calculate flight progress percentage
+ */
+function calculateProgress(flight) {
+  if (flight.status === 'landed' || flight.status === 'arrived') {
+    return 100;
+  }
+  if (flight.status === 'scheduled') {
+    return 0;
+  }
+  
+  // For in-flight, estimate based on time
+  if (flight.departure.actual && flight.arrival.scheduled) {
+    const departed = new Date(flight.departure.actual).getTime();
+    const arriving = new Date(flight.arrival.estimated || flight.arrival.scheduled).getTime();
+    const now = Date.now();
+    
+    if (now >= arriving) return 100;
+    if (now <= departed) return 0;
+    
+    return Math.round(((now - departed) / (arriving - departed)) * 100);
+  }
+  
+  return 50; // Default to middle if we can't calculate
 }
 
 /**

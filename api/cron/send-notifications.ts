@@ -411,10 +411,42 @@ const templates = {
 };
 
 export default async function handler(request: Request) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+  };
+
   // Verify cron secret (prevents unauthorized calls)
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
+  const cronSecret = process.env.CRON_SECRET;
+  
+  if (!cronSecret) {
+    return new Response(
+      JSON.stringify({ error: 'CRON_SECRET not configured' }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
+  
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', hint: 'Check Authorization header format: Bearer YOUR_SECRET' }),
+      { status: 401, headers: corsHeaders }
+    );
+  }
+
+  // Check required env vars
+  const envCheck = {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+    FROM_EMAIL: FROM_EMAIL,
+  };
+
+  if (!envCheck.SUPABASE_URL || !envCheck.SUPABASE_SERVICE_ROLE_KEY || !envCheck.RESEND_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: 'Missing environment variables', envCheck }),
+      { status: 500, headers: corsHeaders }
+    );
   }
 
   try {
@@ -425,26 +457,33 @@ export default async function handler(request: Request) {
     const { data: notifications, error } = await db
       .from('pending_notifications')
       .select('*')
-      .limit(50); // Process in batches
+      .limit(50);
 
     if (error) {
       console.error('Error fetching notifications:', error);
-      return new Response(JSON.stringify({ error: 'Failed to fetch notifications' }), { status: 500 });
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch notifications', details: error.message, code: error.code }),
+        { status: 500, headers: corsHeaders }
+      );
     }
 
     if (!notifications || notifications.length === 0) {
-      return new Response(JSON.stringify({ message: 'No pending notifications' }), { status: 200 });
+      return new Response(
+        JSON.stringify({ message: 'No pending notifications in view', envCheck }),
+        { status: 200, headers: corsHeaders }
+      );
     }
 
     let sent = 0;
     let failed = 0;
+    const results: any[] = [];
 
     for (const notification of notifications) {
       try {
         // Get template
         const templateFn = templates[notification.template_used as keyof typeof templates];
         if (!templateFn) {
-          console.error(`Unknown template: ${notification.template_used}`);
+          results.push({ id: notification.id, error: `Unknown template: ${notification.template_used}` });
           continue;
         }
 
@@ -476,7 +515,8 @@ export default async function handler(request: Request) {
           .eq('id', notification.id);
 
         sent++;
-      } catch (err) {
+        results.push({ id: notification.id, status: 'sent', resendId: emailResult?.id });
+      } catch (err: any) {
         console.error(`Failed to send notification ${notification.id}:`, err);
         
         // Mark as failed
@@ -486,6 +526,13 @@ export default async function handler(request: Request) {
           .eq('id', notification.id);
 
         failed++;
+        results.push({ 
+          id: notification.id, 
+          status: 'failed', 
+          error: err?.message || String(err),
+          to: notification.email,
+          from: FROM_EMAIL
+        });
       }
     }
 
@@ -495,15 +542,17 @@ export default async function handler(request: Request) {
         processed: notifications.length,
         sent,
         failed,
+        results,
+        config: { from: FROM_EMAIL }
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: corsHeaders }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cron error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error', details: error?.message || String(error) }),
+      { status: 500, headers: corsHeaders }
     );
   }
 }
