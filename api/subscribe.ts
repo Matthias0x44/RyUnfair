@@ -93,6 +93,25 @@ export default async function handler(request: Request) {
 
     const db = getSupabase();
 
+    // Test database connection first
+    const { error: testError } = await db
+      .from('users')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database connection failed',
+          details: testError.message || testError.code || 'Connection test failed',
+          code: testError.code,
+          hint: testError.hint,
+          full: JSON.stringify(testError)
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     // Check if user already exists
     const { data: existingUser } = await db
       .from('users')
@@ -120,27 +139,32 @@ export default async function handler(request: Request) {
       // Create new user
       const verificationToken = crypto.randomUUID();
       
+      const userData = {
+        email: email.toLowerCase(),
+        consent_given: true,
+        consent_timestamp: new Date().toISOString(),
+        consent_ip_hash: ipHash,
+        marketing_consent: marketingConsent || false,
+        verification_token: verificationToken,
+      };
+      
       // Insert without .select() to avoid RLS issues on return
-      const { error: insertError } = await db
+      const { error: insertError, status, statusText } = await db
         .from('users')
-        .insert({
-          email: email.toLowerCase(),
-          consent_given: true,
-          consent_timestamp: new Date().toISOString(),
-          consent_ip_hash: ipHash,
-          marketing_consent: marketingConsent || false,
-          verification_token: verificationToken,
-        });
+        .insert(userData);
 
-      if (insertError) {
-        console.error('Error creating user:', insertError);
+      if (insertError || status >= 400) {
+        console.error('Error creating user:', insertError, status, statusText);
         return new Response(
           JSON.stringify({ 
             error: 'Failed to create subscription',
-            details: insertError.message || insertError.code || 'Insert failed',
-            code: insertError.code,
-            hint: insertError.hint,
-            full: JSON.stringify(insertError)
+            details: insertError?.message || insertError?.code || `Insert failed with status ${status}`,
+            code: insertError?.code,
+            hint: insertError?.hint,
+            status,
+            statusText,
+            full: JSON.stringify(insertError),
+            attemptedData: { ...userData, consent_ip_hash: '[redacted]' }
           }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
