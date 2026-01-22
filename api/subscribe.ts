@@ -120,7 +120,8 @@ export default async function handler(request: Request) {
       // Create new user
       const verificationToken = crypto.randomUUID();
       
-      const { data: newUser, error } = await db
+      // Insert without .select() to avoid RLS issues on return
+      const { error: insertError } = await db
         .from('users')
         .insert({
           email: email.toLowerCase(),
@@ -129,19 +130,37 @@ export default async function handler(request: Request) {
           consent_ip_hash: ipHash,
           marketing_consent: marketingConsent || false,
           verification_token: verificationToken,
-        })
-        .select('id')
-        .single();
+        });
 
-      if (error || !newUser) {
-        console.error('Error creating user:', error);
+      if (insertError) {
+        console.error('Error creating user:', insertError);
         return new Response(
           JSON.stringify({ 
             error: 'Failed to create subscription',
-            details: error?.message || error?.code || 'No user returned from database',
-            code: error?.code,
-            hint: error?.hint,
-            full: error ? JSON.stringify(error) : 'error was null but no user returned'
+            details: insertError.message || insertError.code || 'Insert failed',
+            code: insertError.code,
+            hint: insertError.hint,
+            full: JSON.stringify(insertError)
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      // Fetch the newly created user
+      const { data: newUser, error: fetchError } = await db
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (fetchError || !newUser) {
+        console.error('Error fetching new user:', fetchError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'User created but failed to retrieve',
+            details: fetchError?.message || 'Could not fetch user after insert',
+            code: fetchError?.code,
+            full: fetchError ? JSON.stringify(fetchError) : 'fetch returned null'
           }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
