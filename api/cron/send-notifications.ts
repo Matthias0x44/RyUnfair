@@ -450,12 +450,21 @@ export default async function handler(request: Request) {
     const emailClient = getResend();
 
     // Get pending notifications directly (bypassing view for RLS compatibility)
-    // First get pending notifications
+    const now = new Date().toISOString();
+    
+    // First, let's see ALL pending notifications (for debugging)
+    const { data: allPending, error: debugError } = await db
+      .from('notifications')
+      .select('id, status, scheduled_for, type')
+      .eq('status', 'pending')
+      .limit(10);
+    
+    // Now get the ones that are due
     const { data: pendingNotifications, error: notifError } = await db
       .from('notifications')
       .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_for', new Date().toISOString())
+      .lte('scheduled_for', now)
       .limit(50);
 
     if (notifError) {
@@ -468,7 +477,16 @@ export default async function handler(request: Request) {
 
     if (!pendingNotifications || pendingNotifications.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'No pending notifications', envCheck }),
+        JSON.stringify({ 
+          message: 'No pending notifications', 
+          debug: {
+            currentTime: now,
+            allPendingCount: allPending?.length || 0,
+            allPending: allPending || [],
+            debugError: debugError?.message
+          },
+          envCheck 
+        }),
         { status: 200, headers: corsHeaders }
       );
     }
