@@ -2,11 +2,13 @@
  * POST /api/subscribe
  * Subscribe user for flight tracking notifications
  * GDPR compliant - requires explicit consent
+ * Sends verification email directly via Resend (no cron needed)
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
-// Lazily initialize Supabase client (Edge Runtime requires runtime access to env vars)
+// Lazily initialize clients (Edge Runtime requires runtime access to env vars)
 let supabase: SupabaseClient;
 function getSupabase() {
   if (!supabase) {
@@ -21,6 +23,17 @@ function getSupabase() {
   }
   return supabase;
 }
+
+let resend: Resend;
+function getResend() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
+
+const FROM_EMAIL = process.env.FROM_EMAIL || 'RyUnfair <noreply@notifications.ryunfair.com>';
+const APP_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://ryunfair.com';
 
 // Hash function for GDPR compliance (don't store raw IPs)
 // Uses Web Crypto API for Edge Runtime compatibility
@@ -192,14 +205,96 @@ export default async function handler(request: Request) {
 
       userId = newUser.id;
 
-      // Queue verification email
-      await db.from('notifications').insert({
-        user_id: userId,
-        type: 'verification',
-        subject: 'Verify your email for RyUnfair',
-        template_used: 'email_verification',
-        scheduled_for: new Date().toISOString(),
-      });
+      // Send verification email directly via Resend
+      try {
+        const emailClient = getResend();
+        const verifyUrl = `${APP_URL}/api/verify?token=${verificationToken}`;
+        
+        const { data: emailResult, error: emailError } = await emailClient.emails.send({
+          from: FROM_EMAIL,
+          to: email.toLowerCase(),
+          subject: '✈️ Verify your email to track flight delays',
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+                <tr>
+                  <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+                      <!-- Header -->
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #073590 0%, #0a4bc4 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
+                          <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">
+                            <span style="color: #f1c933;">Ry</span><span style="color: white;">Unfair</span>
+                          </h1>
+                          <p style="margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Know your rights. Get your money.</p>
+                        </td>
+                      </tr>
+                      
+                      <!-- Body -->
+                      <tr>
+                        <td style="background: white; padding: 40px 32px;">
+                          <div style="text-align: center; margin-bottom: 24px;">
+                            <span style="font-size: 48px;">📧</span>
+                          </div>
+                          
+                          <h2 style="color: #073590; margin: 0 0 16px; font-size: 24px; text-align: center;">One click to start tracking</h2>
+                          
+                          <p style="color: #4a5568; line-height: 1.7; font-size: 16px; text-align: center; margin: 0 0 32px;">
+                            Thanks for signing up! Verify your email to receive instant notifications when your Ryanair flight is delayed enough for compensation.
+                          </p>
+                          
+                          <div style="text-align: center; margin: 32px 0;">
+                            <a href="${verifyUrl}" 
+                               style="background: #f1c933; color: #073590; padding: 18px 48px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; font-size: 16px; box-shadow: 0 4px 14px rgba(241, 201, 51, 0.4);">
+                              Verify My Email →
+                            </a>
+                          </div>
+                          
+                          <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-top: 32px;">
+                            <p style="color: #64748b; font-size: 14px; margin: 0; text-align: center;">
+                              <strong>What happens next?</strong><br>
+                              We'll monitor your tracked flights and email you the moment a delay qualifies for EU261/UK261 compensation.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      <!-- Footer -->
+                      <tr>
+                        <td style="background: #f8fafc; padding: 24px 32px; border-radius: 0 0 12px 12px; text-align: center;">
+                          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px;">
+                            Didn't sign up for RyUnfair? Just ignore this email.
+                          </p>
+                          <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                            <a href="${APP_URL}/privacy.html" style="color: #073590;">Privacy Policy</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+          `,
+        });
+
+        if (emailError) {
+          console.error('Failed to send verification email:', emailError);
+          // Don't fail the request - user is created, just log the email error
+        } else {
+          console.log('Verification email sent:', emailResult?.id);
+        }
+      } catch (emailErr) {
+        console.error('Email sending error:', emailErr);
+        // Don't fail the request - user is created
+      }
     }
 
     // Log consent for GDPR audit
