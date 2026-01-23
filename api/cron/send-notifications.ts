@@ -33,7 +33,8 @@ function getResend() {
 }
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'RyUnfair <notifications@ryunfair.com>';
-const APP_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://ryunfair.com';
+// Always use the production domain for email links
+const APP_URL = 'https://ryunfair.com';
 
 export const config = {
   runtime: 'edge',

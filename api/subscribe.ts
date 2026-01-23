@@ -33,7 +33,8 @@ function getResend() {
 }
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'RyUnfair <noreply@notifications.ryunfair.com>';
-const APP_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://ryunfair.com';
+// Always use the production domain for email links (VERCEL_URL returns deployment URLs, not custom domains)
+const APP_URL = 'https://ryunfair.com';
 
 // Hash function for GDPR compliance (don't store raw IPs)
 // Uses Web Crypto API for Edge Runtime compatibility
